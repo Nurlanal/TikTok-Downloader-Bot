@@ -1,0 +1,2 @@
+1b4b38c247d22f19c64249baa264c80a5e8acb3de82e697df7a909401c87206f  PayReport-AZ-1.0.0-arm64-v8a.apk
+6a756ea4cb0f7ba1772f2a543d1fe7052879eea0ebe720183506d890cde9e894  PayReport-AZ-1.0.0-armeabi-v7a.apk
