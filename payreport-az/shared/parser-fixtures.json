@@ -1,0 +1,139 @@
+{
+  "_comment": "PayReport AZ ödəniş tanıma sistemi üçün ortaq test nümunələri. Həm backend (Node.js), həm də Android (Kotlin) parseri bu faylla yoxlanılır. paidAt Bakı yerli vaxtıdır (UTC+4); null o deməkdir ki, mətndə tarix yoxdur və email tarixi istifadə olunacaq.",
+  "cases": [
+    {
+      "name": "sade_metn_bir_odenis",
+      "source": "TEXT",
+      "text": "055 777 66 55 — 5 AZN",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "eyni_nomre_uc_setir",
+      "source": "TEXT",
+      "text": "055 777 66 55 — 5 AZN\n055 777 66 55 — 5 AZN\n055 777 66 55 — 5 AZN",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" },
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" },
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "tam_bildiris_txn_ve_tarix",
+      "source": "TEXT",
+      "text": "Hörmətli müştəri!\n+994 50 123 45 67 nömrəsindən 12,50 AZN ödəniş daxil oldu.\nƏməliyyat ID: TRX123456\nTarix: 09.11.2026 14:22",
+      "expected": [
+        { "phone": "+994501234567", "amountMinor": 1250, "txnId": "TRX123456", "paidAt": "2026-11-09T14:22:00", "confidence": 99, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "pdf_qebz_coxsetirli",
+      "source": "PDF",
+      "text": "ÖDƏNİŞ QƏBZİ\nTelefon nömrəsi: (070) 555-44-33\nMəbləğ: 20.00 AZN\nKomissiya: 0.50 AZN\nTarix: 2026-11-08 09:15:30\nQəbz №: 884422",
+      "expected": [
+        { "phone": "+994705554433", "amountMinor": 2000, "txnId": "884422", "paidAt": "2026-11-08T09:15:30", "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "ocr_sekil_gozleyen",
+      "source": "IMAGE",
+      "text": "Telefon: 077 222 33 44\nMəbləğ: 7 AZN\nBalans: 120 AZN",
+      "expected": [
+        { "phone": "+994772223344", "amountMinor": 700, "txnId": null, "paidAt": null, "confidence": 75, "status": "PENDING" }
+      ]
+    },
+    {
+      "name": "qeyri_mueyyen_mebleg",
+      "source": "TEXT",
+      "text": "Nömrə: 055 111 22 33\nÖdənişlər: 5 AZN, 10 AZN",
+      "expected": [
+        { "phone": "+994551112233", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 50, "status": "PENDING" }
+      ]
+    },
+    {
+      "name": "yalniz_nomre_odenis_deyil",
+      "source": "TEXT",
+      "text": "Yeni abunəçi 099 888 77 66 qeydiyyatdan keçdi",
+      "expected": []
+    },
+    {
+      "name": "yalniz_mebleg_nomre_yoxdur",
+      "source": "TEXT",
+      "text": "Ödəniş qəbul edildi: 15 AZN",
+      "expected": [
+        { "phone": null, "amountMinor": 1500, "txnId": null, "paidAt": null, "confidence": 30, "status": "PENDING" }
+      ]
+    },
+    {
+      "name": "minlik_ayirici",
+      "source": "TEXT",
+      "text": "055 777 66 55 — 1 250,50 AZN",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 125050, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "beynelxalq_format_kicik_herf",
+      "source": "TEXT",
+      "text": "994551234567 - 3.5 azn",
+      "expected": [
+        { "phone": "+994551234567", "amountMinor": 350, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "odenis_olmayan_mektub",
+      "source": "TEXT",
+      "text": "Salam, həftəlik xəbərlər bülleteni. Bizi izlədiyiniz üçün təşəkkür edirik.",
+      "expected": []
+    },
+    {
+      "name": "manat_isaresi",
+      "source": "TEXT",
+      "text": "050 222 33 44 → 8 ₼",
+      "expected": [
+        { "phone": "+994502223344", "amountMinor": 800, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "balans_eyni_setirde",
+      "source": "TEXT",
+      "text": "055 777 66 55 — 5 AZN, balans: 100 AZN",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "iki_ferqli_nomre",
+      "source": "TEXT",
+      "text": "Gün ərzində ödənişlər:\n055 777 66 55 — 5 AZN\n050 123 45 67 — 10 AZN\n070 555 44 33 — 2.40 AZN",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" },
+        { "phone": "+994501234567", "amountMinor": 1000, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" },
+        { "phone": "+994705554433", "amountMinor": 240, "txnId": null, "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "setir_tarixi_ve_saat",
+      "source": "TEXT",
+      "text": "08.11.2026 18:05 | 055 777 66 55 | 5.00 AZN | ID: A1B2C3D4",
+      "expected": [
+        { "phone": "+994557776655", "amountMinor": 500, "txnId": "A1B2C3D4", "paidAt": "2026-11-08T18:05:00", "confidence": 99, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "boyuk_herfler_azerbaycan",
+      "source": "TEXT",
+      "text": "ƏMƏLİYYAT İD: 77001122\nTELEFON: 051 444 55 66\nMƏBLƏĞ: 30 AZN",
+      "expected": [
+        { "phone": "+994514445566", "amountMinor": 3000, "txnId": "77001122", "paidAt": null, "confidence": 95, "status": "CONFIRMED" }
+      ]
+    },
+    {
+      "name": "endirim_reklam",
+      "source": "TEXT",
+      "text": "Yalnız bu həftə 50 AZN endirim! Əlaqə: 012 555 55 55",
+      "expected": []
+    }
+  ]
+}

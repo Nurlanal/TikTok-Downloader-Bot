@@ -1,0 +1,15 @@
+node_modules/
+.env
+*.log
+
+# Android
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+keystore.properties
+*.jks
+*.keystore
+captures/
