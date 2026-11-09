@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -95,6 +96,8 @@ private fun AppRoot(container: AppContainer) {
     }
 
     Scaffold(
+        // Yuxarı (status paneli) boşluğunu hər ekran özü idarə edir; burada yalnız alt panel nəzərə alınır
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 DESTS.forEach { d ->
