@@ -36,8 +36,8 @@ IMAP parametrləri (avtomatik doldurulur):
 ## 2. Android tətbiqi — birbaşa rejim
 
 1. `release/` qovluğundan APK-nı telefona köçürün:
-   - `PayReport-AZ-1.0.1-arm64-v8a.apk` — 2017-dən sonrakı demək olar bütün telefonlar
-   - `PayReport-AZ-1.0.1-armeabi-v7a.apk` — köhnə 32-bit telefonlar
+   - `PayReport-AZ-1.0.2-arm64-v8a.apk` — 2017-dən sonrakı demək olar bütün telefonlar
+   - `PayReport-AZ-1.0.2-armeabi-v7a.apk` — köhnə 32-bit telefonlar
 2. Quraşdırarkən "Naməlum mənbələrdən quraşdırma"ya icazə verin.
 3. **Ayarlar → İş rejimi → Cihazda**.
 4. **Mail.ru hesabı**: email və tətbiq parolunu daxil edin → **Bağlantını yoxla** → **Saxla**.

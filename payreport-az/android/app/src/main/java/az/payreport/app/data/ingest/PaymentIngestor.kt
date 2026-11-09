@@ -22,7 +22,9 @@ data class IngestStats(var created: Int = 0, var pending: Int = 0, var duplicate
 
 /**
  * Parser nəticələrini lokal bazaya yazır (birbaşa rejim). Alqoritm backend-dəki
- * `services/payments.js` ilə eynidir: dedupe açarı TXN:<id> və ya MSG:<message-id>#<n>.
+ * `services/payments.js` ilə eynidir: dedupe açarı TXN:<id>|<telefon>|<məbləğ> və ya MSG:<message-id>#<n>.
+ * Telefon və məbləğ açara daxildir ki, məktubdakı sabit nömrələr (məs. "Terminal ID")
+ * fərqli ödənişləri təkrar kimi birləşdirməsin.
  */
 class PaymentIngestor(private val payments: PaymentDao, private val audit: AuditDao) {
 
@@ -58,7 +60,7 @@ class PaymentIngestor(private val payments: PaymentDao, private val audit: Audit
             val status = if (forcePending) PaymentParser.STATUS_PENDING else p.status
             val now = System.currentTimeMillis()
             val entity = PaymentEntity(
-                dedupeKey = if (p.txnId != null) "TXN:${p.txnId}" else "$dedupeBase#$i",
+                dedupeKey = if (p.txnId != null) "TXN:${p.txnId}|${p.phone.orEmpty()}|${p.amountMinor ?: ""}" else "$dedupeBase#$i",
                 phone = p.phone,
                 amountMinor = p.amountMinor,
                 paidAt = Fmt.parseLocal(p.paidAt) ?: fallbackTime,

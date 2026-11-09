@@ -38,7 +38,7 @@ const config = {
   syncEnabled: process.env.SYNC_ENABLED !== '0',
   ocrEnabled: process.env.OCR_ENABLED === '1',
   ocrLanguages: process.env.OCR_LANGUAGES || 'eng+aze',
-  maxMessagesPerRun: int('MAX_MESSAGES_PER_RUN', 500),
+  maxMessagesPerRun: int('MAX_MESSAGES_PER_RUN', 2000),
 };
 
 module.exports = config;

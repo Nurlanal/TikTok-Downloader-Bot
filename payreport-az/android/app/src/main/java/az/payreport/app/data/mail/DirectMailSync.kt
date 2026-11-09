@@ -51,6 +51,10 @@ class DirectMailSync(
 ) {
     private val ingestor = PaymentIngestor(db.payments(), db.audit())
 
+    /** Son icrada vaxt limitinə görə oxunmamış qalan məktub sayı. */
+    @Volatile var lastRemaining: Int = 0
+        private set
+
     private fun session(cfg: MailConfig): Session {
         val props = Properties().apply {
             put("mail.store.protocol", "imaps")
@@ -93,7 +97,11 @@ class DirectMailSync(
         }
     }
 
-    suspend fun sync(trigger: String, maxMessages: Int = 300): SyncRunEntity = withContext(Dispatchers.IO) {
+    /**
+     * Bütün yeni məktubları oxuyur. Bir icra ən çox [timeBudgetMs] davam edir (WorkManager limiti 10 dəq);
+     * qalan məktublar növbəti sinxronizasiyada UID kursorundan davam etdirilir.
+     */
+    suspend fun sync(trigger: String, timeBudgetMs: Long = 8 * 60_000L): SyncRunEntity = withContext(Dispatchers.IO) {
         val cfg = settings.current.mail
         val started = System.currentTimeMillis()
         val runId = db.syncRuns().insert(SyncRunEntity(trigger = trigger, startedAt = started, finishedAt = null, status = "RUNNING"))
@@ -105,6 +113,7 @@ class DirectMailSync(
         val totals = IngestStats()
         var fetched = 0
         var errors = 0
+        var remaining = 0
         var store: Store? = null
         try {
             store = connect(cfg, password)
@@ -125,10 +134,12 @@ class DirectMailSync(
                     .map { it to folder.getUID(it) }
                     .filter { it.second > lastUid }
                     .sortedBy { it.second }
-                    .take(maxMessages)
 
+                remaining = ordered.size
                 for ((msg, uid) in ordered) {
+                    if (System.currentTimeMillis() - started > timeBudgetMs) break
                     fetched++
+                    remaining--
                     try {
                         totals += processMessage(msg as MimeMessage, uidValidity, uid, cfg)
                     } catch (e: Exception) {
@@ -145,7 +156,9 @@ class DirectMailSync(
             } finally {
                 runCatching { folder.close(false) }
             }
-            val msg = "$fetched məktub oxundu, ${totals.created} təsdiqlənmiş, ${totals.pending} gözləyən, ${totals.duplicates} təkrar"
+            lastRemaining = remaining
+            val left = if (remaining > 0) ". Qalan $remaining məktub növbəti sinxronizasiyada oxunacaq" else ""
+            val msg = "$fetched məktub oxundu, ${totals.created} təsdiqlənmiş, ${totals.pending} gözləyən, ${totals.duplicates} təkrar$left"
             finish(runId, trigger, started, "SUCCESS", totals, fetched, errors, msg)
         } catch (e: Exception) {
             finish(runId, trigger, started, "FAILED", totals, fetched, errors + 1, humanize(e))

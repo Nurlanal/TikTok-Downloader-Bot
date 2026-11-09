@@ -58,7 +58,8 @@ async function getById(id, q = db.query) {
 
 /**
  * Parser nəticələrini bazaya yazır. Təkrarlar dedupe_key ilə bloklanır:
- *   - əməliyyat ID varsa: TXN:<id>
+ *   - əməliyyat ID varsa: TXN:<id>|<telefon>|<məbləğ> (məktubdakı sabit "Terminal ID" kimi
+ *     nömrələr fərqli ödənişləri birləşdirməsin deyə telefon və məbləğ də açara daxildir)
  *   - yoxdursa: <dedupeBase>#<sıra> (məs. MSG:<message-id>#0)
  * @returns {{created:number, pending:number, duplicates:number, ids:number[]}}
  */
@@ -66,7 +67,7 @@ async function ingestParsed(q, { items, dedupeBase, fallbackDate, email = {}, ac
   const stats = { created: 0, pending: 0, duplicates: 0, ids: [] };
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
-    const dedupeKey = it.txnId ? `TXN:${it.txnId}` : `${dedupeBase}#${i}`;
+    const dedupeKey = it.txnId ? `TXN:${it.txnId}|${it.phone || ''}|${it.amountMinor || ''}` : `${dedupeBase}#${i}`;
     const paidAt = bakuLocalToDate(it.paidAt) || fallbackDate || new Date();
     const res = await q(
       `INSERT IGNORE INTO payments
@@ -145,7 +146,7 @@ async function createManual({ phone, amountMinor, paidAt, txnId, note, status },
     const res = await q(
       `INSERT INTO payments (dedupe_key, phone, amount_minor, currency, paid_at, status, source, confidence, txn_id, note, created_by)
        VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [txn ? `TXN:${txn}` : `MAN:${crypto.randomUUID()}`, normalized, amountMinor, 'AZN', when, st, 'MANUAL', 100, txn, note || null, actor]
+      [txn ? `TXN:${txn}|${normalized}|${amountMinor}` : `MAN:${crypto.randomUUID()}`, normalized, amountMinor, 'AZN', when, st, 'MANUAL', 100, txn, note || null, actor]
     );
     await audit(q, {
       paymentId: res.insertId,

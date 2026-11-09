@@ -27,6 +27,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         const val KEY_TRIGGER = "trigger"
         private const val PERIODIC = "payreport-periodic-sync"
         private const val ONE_TIME = "payreport-sync-now"
+        private const val CONTINUE = "payreport-sync-continue"
 
         private val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
@@ -42,6 +43,15 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 .setInputData(workDataOf(KEY_TRIGGER to "AUTO"))
                 .build()
             wm.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, req)
+        }
+
+        /** Qalan məktubları oxumaq üçün növbəti icra (cari icra bitdikdən sonra). */
+        fun continueSoon(context: Context) {
+            val req = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_TRIGGER to "AUTO"))
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(CONTINUE, ExistingWorkPolicy.APPEND_OR_REPLACE, req)
         }
 
         fun runNow(context: Context) {

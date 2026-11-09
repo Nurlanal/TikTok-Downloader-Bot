@@ -83,6 +83,10 @@ interface PaymentDao {
 
     @Query("DELETE FROM payments")
     suspend fun deleteAll()
+
+    /** Yalnız mail-dən avtomatik yaradılmış ödənişlər (əl ilə daxil edilənlər qalır). */
+    @Query("DELETE FROM payments WHERE createdBy = 'mail-worker'")
+    suspend fun deleteFromMail(): Int
 }
 
 @Dao

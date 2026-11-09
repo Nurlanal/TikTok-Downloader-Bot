@@ -45,6 +45,8 @@ class SyncManager(
             val outcome = when (settings.current.mode) {
                 SyncMode.DIRECT -> {
                     val r = direct.sync(trigger)
+                    // Çox məktub varsa, qalanını dərhal fon rejimində davam etdiririk
+                    if (r.status == "SUCCESS" && direct.lastRemaining > 0) az.payreport.app.work.SyncWorker.continueSoon(context)
                     SyncOutcome(r.status == "SUCCESS", r.created, r.pending, r.message.orEmpty())
                 }
                 SyncMode.SERVER -> pullFromServer(trigger)
@@ -82,6 +84,29 @@ class SyncManager(
         } catch (e: Exception) {
             SyncOutcome(false, 0, 0, e.message ?: "Server xətası")
         }
+    }
+
+    /**
+     * Maildən gələn ödənişləri silib məktubları son [days] gün üzrə yenidən oxuyur (birbaşa rejim).
+     * Parser qaydaları yeniləndikdən sonra köhnə səhv hesabı düzəltmək üçündür.
+     * Əl ilə daxil edilmiş ödənişlər saxlanılır; əməliyyat audit jurnalına yazılır.
+     */
+    suspend fun reprocessMail(days: Int): SyncOutcome {
+        mutex.withLock {
+            db.withTransaction {
+                val removed = db.payments().deleteFromMail()
+                db.processedEmails().deleteAll()
+                db.audit().insert(
+                    az.payreport.app.data.db.AuditEntity(
+                        paymentId = null, action = "REPROCESS", actor = "admin (cihaz)",
+                        details = "{\"removedMailPayments\":$removed,\"days\":$days}",
+                    )
+                )
+            }
+            settings.setMail(settings.current.mail.copy(initialDays = days))
+            settings.resetImapCursor()
+        }
+        return syncNow("MANUAL")
     }
 
     /** Rejim dəyişəndə lokal keşi təmizləyir. */

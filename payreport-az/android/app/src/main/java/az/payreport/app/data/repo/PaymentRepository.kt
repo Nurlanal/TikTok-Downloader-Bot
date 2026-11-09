@@ -75,7 +75,7 @@ class PaymentRepository(
             val now = System.currentTimeMillis()
             val id = dao.insertIgnore(
                 PaymentEntity(
-                    dedupeKey = if (txn != null) "TXN:$txn" else "MAN:${UUID.randomUUID()}",
+                    dedupeKey = if (txn != null) "TXN:$txn|$phone|${d.amountMinor}" else "MAN:${UUID.randomUUID()}",
                     phone = phone, amountMinor = d.amountMinor, paidAt = d.paidAt,
                     status = PaymentStatus.CONFIRMED, source = PaymentSource.MANUAL, confidence = 100,
                     txnId = txn, note = d.note?.ifBlank { null }, createdBy = actor, createdAt = now, updatedAt = now,

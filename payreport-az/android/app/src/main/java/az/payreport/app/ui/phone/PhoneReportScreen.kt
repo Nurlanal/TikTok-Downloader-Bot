@@ -154,7 +154,7 @@ fun PhoneReportScreen() {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatCard("Ödəniş sayı", r.count.toString(), Icons.Outlined.Receipt, Modifier.weight(1f),
-                            caption = if (r.pendingCount > 0) "+${r.pendingCount} gözləyən" else null)
+                            caption = if (r.pendingCount > 0) "+${r.pendingCount} gözləyən (${Fmt.azn(r.pendingMinor)})" else null)
                         StatCard("Son ödəniş", r.lastPaidAt?.let { Fmt.date(it) } ?: "—", Icons.Outlined.CalendarMonth, Modifier.weight(1f),
                             caption = r.lastPaidAt?.let { Fmt.time(it) })
                     }

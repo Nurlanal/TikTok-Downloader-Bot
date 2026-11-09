@@ -327,3 +327,21 @@ test('sinxronizasiya tarixçəsi və mail statusu', async () => {
   assert.equal(st.body.account.email, 'hesab@mail.ru');
   assert.equal(st.body.account.lastStatus, 'OK');
 });
+
+test('sabit "Terminal ID" fərqli ödənişləri birləşdirmir', async () => {
+  const before = await api('GET', `/reports/phone/${encodeURIComponent('070 794 93 92')}`);
+  const base = before.status === 200 ? before.body.totalMinor : 0;
+  const msgs = [
+    { uid: 101, source: rfc822({ id: 't1', text: 'Terminal ID: 55501\n070 794 93 92 — 1000 AZN' }) },
+    { uid: 102, source: rfc822({ id: 't2', text: 'Terminal ID: 55501\n070 794 93 92 — 2500 AZN' }) },
+    { uid: 103, source: rfc822({ id: 't3', text: 'Terminal ID: 55501\n070 794 93 92 — 2500 AZN' }) },
+    { uid: 104, source: rfc822({ id: 't4', text: 'Terminal ID: 55501\n070 794 93 92 — 10000 AZN' }) },
+  ];
+  await db.query('UPDATE mail_accounts SET last_uid = 100, uid_validity = 777');
+  const r = await worker.runSync({ trigger: 'MANUAL', clientFactory: fakeClientFactory(msgs) });
+  assert.equal(r.status, 'SUCCESS', r.message);
+  const rep = await api('GET', `/reports/phone/${encodeURIComponent('070 794 93 92')}`);
+  // t2 və t3 eyni ID + eyni nömrə + eyni məbləğdir — həqiqi təkrar kimi bir dəfə sayılır
+  assert.equal(rep.body.totalMinor - base, (1000 + 2500 + 10000) * 100);
+  assert.equal(r.duplicates, 1);
+});

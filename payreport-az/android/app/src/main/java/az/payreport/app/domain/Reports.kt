@@ -31,6 +31,7 @@ data class PhoneReport(
     val totalMinor: Long,
     val lastPaidAt: Long?,
     val pendingCount: Int,
+    val pendingMinor: Long,
     val monthly: List<MonthTotal>,
     val payments: List<PaymentEntity>,
 )
@@ -78,6 +79,7 @@ object Reports {
             totalMinor = confirmed.sumOf { it.amountMinor!! },
             lastPaidAt = confirmed.maxOfOrNull { it.paidAt },
             pendingCount = payments.count { it.status == PaymentStatus.PENDING },
+            pendingMinor = payments.filter { it.status == PaymentStatus.PENDING }.sumOf { it.amountMinor ?: 0 },
             monthly = monthly,
             payments = payments.sortedByDescending { it.paidAt },
         )

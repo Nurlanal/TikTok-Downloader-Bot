@@ -161,6 +161,14 @@ class AdminViewModel(private val c: AppContainer) : ViewModel() {
         refreshRemote()
     }
 
+    fun reprocess(days: Int) = viewModelScope.launch {
+        busy.value = true
+        message.value = "Məktublar yenidən oxunur… Bu bir neçə dəqiqə çəkə bilər."
+        val o = c.syncManager.reprocessMail(days)
+        message.value = o.message
+        busy.value = false
+    }
+
     fun testConnection() = viewModelScope.launch {
         busy.value = true
         if (c.settings.current.mode == SyncMode.DIRECT) {
@@ -391,7 +399,35 @@ private fun MailTab(vm: AdminViewModel, onOpenSettings: () -> Unit) {
     val test by vm.testResult.collectAsState()
     val counts by vm.emailCounts.collectAsState()
     val remote by vm.remoteStatus.collectAsState()
+    var reprocessDialog by remember { mutableStateOf(false) }
     LaunchedEffect(s.mode) { vm.refreshRemote() }
+    if (reprocessDialog) {
+        var days by remember { mutableStateOf(maxOf(s.mail.initialDays, 60).toString()) }
+        AlertDialog(
+            onDismissRequest = { reprocessDialog = false },
+            title = { Text("Yenidən oxu və hesabla") },
+            text = {
+                Column {
+                    Text(
+                        "Maildən gələn bütün ödənişlər silinəcək və məktublar yeni tanıma qaydaları ilə yenidən oxunacaq. " +
+                            "Əl ilə daxil edilmiş ödənişlər qalır. Maildən gələn ödənişlərdə etdiyiniz redaktə və təsdiqlər itəcək. " +
+                            "Əməliyyat audit jurnalına yazılır.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(days, { days = it.filter(Char::isDigit).take(4) }, label = { Text("Son neçə günün məktubları") },
+                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    reprocessDialog = false
+                    vm.reprocess((days.toIntOrNull() ?: 60).coerceIn(1, 3650))
+                }) { Text("Başla") }
+            },
+            dismissButton = { TextButton(onClick = { reprocessDialog = false }) { Text("Ləğv") } },
+        )
+    }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -428,6 +464,11 @@ private fun MailTab(vm: AdminViewModel, onOpenSettings: () -> Unit) {
                     }
                 }
                 TextButton(onClick = onOpenSettings) { Text("Bağlantı ayarlarını dəyiş") }
+                if (s.mode == SyncMode.DIRECT && s.mailPasswordSet) {
+                    OutlinedButton(onClick = { reprocessDialog = true }, enabled = !syncing, modifier = Modifier.fillMaxWidth()) {
+                        Text("Yenidən oxu və hesabla")
+                    }
+                }
             }
         }
         test?.let { t ->
