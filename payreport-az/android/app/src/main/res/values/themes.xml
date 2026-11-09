@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="navy">#0B1F3A</color>
+    <color name="green">#16A34A</color>
+    <color name="light_gray">#F3F5F9</color>
+    <style name="Theme.PayReport" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/light_gray</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
