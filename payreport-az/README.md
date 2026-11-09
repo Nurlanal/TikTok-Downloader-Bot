@@ -72,7 +72,7 @@ payreport-az/
 
 ## Sürətli başlanğıc
 
-1. `release/PayReport-AZ-1.0.2-arm64-v8a.apk` faylını telefona quraşdırın.
+1. `release/PayReport-AZ-1.0.3-arm64-v8a.apk` faylını telefona quraşdırın.
 2. Mail.ru-da **xarici tətbiq parolu** yaradın ([SETUP.md §1](docs/SETUP.md)).
 3. Tətbiqdə **Ayarlar → Mail.ru hesabı** → email + parol → **Bağlantını yoxla** → **Saxla**.
 4. Paneldə **Yenilə**.

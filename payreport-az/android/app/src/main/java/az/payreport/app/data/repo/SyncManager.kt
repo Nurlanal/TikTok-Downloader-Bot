@@ -46,7 +46,7 @@ class SyncManager(
                 SyncMode.DIRECT -> {
                     val r = direct.sync(trigger)
                     // Çox məktub varsa, qalanını dərhal fon rejimində davam etdiririk
-                    if (r.status == "SUCCESS" && direct.lastRemaining > 0) az.payreport.app.work.SyncWorker.continueSoon(context)
+                    if (direct.lastRemaining > 0) az.payreport.app.work.SyncWorker.continueSoon(context)
                     SyncOutcome(r.status == "SUCCESS", r.created, r.pending, r.message.orEmpty())
                 }
                 SyncMode.SERVER -> pullFromServer(trigger)

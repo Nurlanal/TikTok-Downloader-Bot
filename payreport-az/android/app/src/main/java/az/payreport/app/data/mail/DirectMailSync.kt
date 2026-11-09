@@ -20,7 +20,10 @@ import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.Properties
 import javax.mail.AuthenticationFailedException
+import javax.mail.FetchProfile
 import javax.mail.Folder
+import javax.mail.FolderClosedException
+import javax.mail.StoreClosedException
 import javax.mail.Message
 import javax.mail.MessagingException
 import javax.mail.Multipart
@@ -114,57 +117,94 @@ class DirectMailSync(
         var fetched = 0
         var errors = 0
         var remaining = 0
-        var store: Store? = null
-        try {
-            store = connect(cfg, password)
-            val folder = store.getFolder(cfg.mailbox) as IMAPFolder
-            folder.open(Folder.READ_ONLY)
+        var reconnects = 0
+        val deadline = started + timeBudgetMs
+        // Oxunacaq UID-lər bir dəfə müəyyən edilir; bağlantı kəsilsə, qaldığı yerdən davam edilir
+        var pendingUids: List<Long>? = null
+        var uidValidity = -1L
+        var lastUid = settings.imapLastUid
+
+        while (true) {
+            var store: Store? = null
+            var folder: IMAPFolder? = null
             try {
-                val uidValidity = folder.uidValidity
-                var lastUid = settings.imapLastUid
-                if (settings.imapUidValidity != uidValidity) lastUid = 0 // Message-ID ilə təkrarlar yenə bloklanır
-
-                val messages: Array<Message> = if (lastUid > 0) {
-                    folder.getMessagesByUID(lastUid + 1, UIDFolder.LASTUID)
-                } else {
-                    val since = Date(System.currentTimeMillis() - cfg.initialDays * 24L * 3600 * 1000)
-                    folder.search(ReceivedDateTerm(ComparisonTerm.GE, since))
-                }
-                val ordered = messages
-                    .map { it to folder.getUID(it) }
-                    .filter { it.second > lastUid }
-                    .sortedBy { it.second }
-
-                remaining = ordered.size
-                for ((msg, uid) in ordered) {
-                    if (System.currentTimeMillis() - started > timeBudgetMs) break
-                    fetched++
-                    remaining--
-                    try {
-                        totals += processMessage(msg as MimeMessage, uidValidity, uid, cfg)
-                    } catch (e: Exception) {
-                        errors++
-                        db.processedEmails().insert(
-                            ProcessedEmailEntity("$uidValidity:$uid", null, null, null, null, "ERROR", 0, e.message?.take(500))
-                        )
+                store = connect(cfg, password)
+                folder = store.getFolder(cfg.mailbox) as IMAPFolder
+                folder.open(Folder.READ_ONLY)
+                val uv = folder.uidValidity
+                if (pendingUids == null || uv != uidValidity) {
+                    uidValidity = uv
+                    if (settings.imapUidValidity != uidValidity) lastUid = 0 // Message-ID ilə təkrarlar yenə bloklanır
+                    val messages: Array<Message> = if (lastUid > 0) {
+                        folder.getMessagesByUID(lastUid + 1, UIDFolder.LASTUID)
+                    } else {
+                        val since = Date(System.currentTimeMillis() - cfg.initialDays * 24L * 3600 * 1000)
+                        folder.search(ReceivedDateTerm(ComparisonTerm.GE, since))
                     }
+                    // UID-ləri bir sorğu ilə alırıq (hər məktub üçün ayrıca sorğu minlərlə məktubda çox yavaşdır)
+                    folder.fetch(messages, FetchProfile().apply { add(UIDFolder.FetchProfileItem.UID) })
+                    pendingUids = messages.map { folder.getUID(it) }.filter { it > lastUid }.distinct().sorted()
+                }
+                val todo = pendingUids!!.filter { it > lastUid }
+                remaining = todo.size
+                for (uid in todo) {
+                    if (System.currentTimeMillis() > deadline) break
+                    val msg = folder.getMessageByUID(uid)
+                    if (msg != null) {
+                        try {
+                            totals += processMessage(msg as MimeMessage, uidValidity, uid, cfg)
+                        } catch (e: Exception) {
+                            // Bağlantı kəsilibsə məktubu "xəta" kimi qeyd etmirik — yenidən qoşulub təkrar oxuyacağıq
+                            if (isConnectionError(e)) throw e
+                            errors++
+                            db.processedEmails().insert(
+                                ProcessedEmailEntity("$uidValidity:$uid", null, null, null, null, "ERROR", 0, e.message?.take(500))
+                            )
+                        }
+                        fetched++
+                    }
+                    remaining--
                     lastUid = maxOf(lastUid, uid)
                     settings.imapLastUid = lastUid
                     settings.imapUidValidity = uidValidity
                 }
                 settings.imapUidValidity = uidValidity
+                break
+            } catch (e: Exception) {
+                val canRetry = isConnectionError(e) && reconnects < MAX_RECONNECTS && System.currentTimeMillis() < deadline
+                if (!canRetry) {
+                    // Yalnız irəliləyiş olubsa davam etdiririk (sonsuz təkrarın qarşısını almaq üçün)
+                    lastRemaining = if (fetched > 0) maxOf(remaining, 1) else 0
+                    val progress = if (fetched > 0) " ($fetched məktub oxunub, qalanı növbəti sinxronizasiyada davam edəcək)" else ""
+                    return@withContext finish(runId, trigger, started, "FAILED", totals, fetched, errors + 1, humanize(e) + progress)
+                }
+                reconnects++
+                kotlinx.coroutines.delay(2_000L * reconnects)
             } finally {
-                runCatching { folder.close(false) }
+                runCatching { folder?.close(false) }
+                runCatching { store?.close() }
             }
-            lastRemaining = remaining
-            val left = if (remaining > 0) ". Qalan $remaining məktub növbəti sinxronizasiyada oxunacaq" else ""
-            val msg = "$fetched məktub oxundu, ${totals.created} təsdiqlənmiş, ${totals.pending} gözləyən, ${totals.duplicates} təkrar$left"
-            finish(runId, trigger, started, "SUCCESS", totals, fetched, errors, msg)
-        } catch (e: Exception) {
-            finish(runId, trigger, started, "FAILED", totals, fetched, errors + 1, humanize(e))
-        } finally {
-            runCatching { store?.close() }
         }
+
+        lastRemaining = remaining
+        val left = if (remaining > 0) ". Qalan $remaining məktub növbəti sinxronizasiyada oxunacaq" else ""
+        val again = if (reconnects > 0) ". Bağlantı $reconnects dəfə kəsildi və bərpa olundu" else ""
+        val msg = "$fetched məktub oxundu, ${totals.created} təsdiqlənmiş, ${totals.pending} gözləyən, ${totals.duplicates} təkrar$left$again"
+        finish(runId, trigger, started, "SUCCESS", totals, fetched, errors, msg)
+    }
+
+    /** Şəbəkə/IMAP bağlantısının kəsilməsi (məktubun özündə xəta deyil). */
+    private fun isConnectionError(e: Throwable): Boolean {
+        var t: Throwable? = e
+        var depth = 0
+        while (t != null && depth < 8) {
+            if (t is FolderClosedException || t is StoreClosedException || t is java.io.IOException ||
+                t is com.sun.mail.iap.ConnectionException
+            ) return true
+            t = (t as? MessagingException)?.nextException ?: t.cause
+            depth++
+        }
+        return false
     }
 
     private suspend fun finish(
@@ -264,6 +304,8 @@ class DirectMailSync(
     }
 
     companion object {
+        private const val MAX_RECONNECTS = 5
+
         fun cleanPassword(p: String): String = p.filterNot { it.isWhitespace() }
     }
 
@@ -284,6 +326,7 @@ class DirectMailSync(
             }
             e.cause is java.net.UnknownHostException || e is java.net.UnknownHostException -> "Server tapılmadı. İnternet bağlantısını yoxlayın."
             e.cause is java.net.SocketTimeoutException -> "Bağlantı vaxtı bitdi."
+            isConnectionError(e) -> "Mail.ru ilə bağlantı kəsildi (şəbəkə dəyişdi və ya server bağlantını bağladı)."
             e.cause is javax.net.ssl.SSLException -> "SSL/TLS xətası: ${e.cause?.message}"
             e is MessagingException && e.nextException != null -> humanize(e.nextException)
             msg.isNotBlank() -> msg.take(400)
