@@ -101,16 +101,22 @@ class SettingsViewModel(private val c: AppContainer, private val app: android.co
         c.settings.setMail(cfg)
         if (old.email != cfg.email.trim() || old.mailbox != cfg.mailbox.trim() || old.host != cfg.host.trim()) c.settings.resetImapCursor()
         if (password.isNotEmpty()) {
-            c.secureStore.putString(SecureStore.MAIL_PASSWORD, password)
+            c.secureStore.putString(SecureStore.MAIL_PASSWORD, az.payreport.app.data.mail.DirectMailSync.cleanPassword(password))
             c.settings.setMailPasswordSet(true)
         }
         reschedule()
         "Mail ayarları saxlanıldı (şifrə Android Keystore ilə şifrələnib)"
     }
 
+    /** Mail bölməsinin altında göstərilən son test nəticəsi */
+    val mailResult = MutableStateFlow<String?>(null)
+
     fun testMail(cfg: MailConfig, password: String) = act {
-        val r = c.directMail.testConnection(cfg, password.ifEmpty { null })
-        if (r.ok) "✓ Bağlantı uğurludur: ${r.messages} məktub, ${r.unread} oxunmamış (${r.latencyMs} ms)" else "✗ ${r.error}"
+        mailResult.value = "Yoxlanılır…"
+        val r = c.directMail.testConnection(cfg, password.ifBlank { null })
+        val text = if (r.ok) "✓ Bağlantı uğurludur: ${r.messages} məktub, ${r.unread} oxunmamış (${r.latencyMs} ms)" else "✗ ${r.error}"
+        mailResult.value = text
+        text
     }
 
     fun forgetMailPassword() = act {
@@ -323,6 +329,18 @@ private fun MailSection(s: SettingsState, vm: SettingsViewModel) {
                 Button(onClick = { vm.saveMail(cfg, password); password = "" }, modifier = Modifier.weight(1f)) { Text("Saxla") }
                 OutlinedButton(onClick = { vm.testMail(cfg, password) }, modifier = Modifier.weight(1f)) { Text("Bağlantını yoxla") }
             }
+        }
+        val result by vm.mailResult.collectAsState()
+        result?.let { r ->
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                color = when {
+                    r.startsWith("✓") -> AppTheme.extra.positiveContainer
+                    r.startsWith("✗") -> AppTheme.extra.dangerContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                },
+                shape = MaterialTheme.shapes.small,
+            ) { Text(r, Modifier.fillMaxWidth().padding(10.dp), style = MaterialTheme.typography.bodySmall) }
         }
         if (!server && s.mailPasswordSet) {
             TextButton(onClick = { vm.forgetMailPassword() }) { Text("Saxlanmış şifrəni sil", color = AppTheme.extra.danger) }

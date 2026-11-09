@@ -69,12 +69,13 @@ class DirectMailSync(
 
     private fun connect(cfg: MailConfig, password: String): Store {
         val store = session(cfg).getStore("imaps")
-        store.connect(cfg.host, cfg.port, cfg.email, password)
+        store.connect(cfg.host.trim(), cfg.port, cfg.email.trim().lowercase(), password)
         return store
     }
 
     suspend fun testConnection(cfg: MailConfig, password: String?): ConnectionTestResult = withContext(Dispatchers.IO) {
-        val pass = password?.takeIf { it.isNotEmpty() } ?: secureStore.getString(SecureStore.MAIL_PASSWORD)
+        // Kopyalanan parolda təsadüfi boşluqlar ola bilər; Mail.ru tətbiq parollarında boşluq olmur
+        val pass = (password?.takeIf { it.isNotBlank() } ?: secureStore.getString(SecureStore.MAIL_PASSWORD))?.let(::cleanPassword)
         if (cfg.email.isBlank() || pass.isNullOrEmpty()) return@withContext ConnectionTestResult(false, error = "Email və şifrə daxil edilməyib")
         val started = System.currentTimeMillis()
         var store: Store? = null
@@ -96,7 +97,7 @@ class DirectMailSync(
         val cfg = settings.current.mail
         val started = System.currentTimeMillis()
         val runId = db.syncRuns().insert(SyncRunEntity(trigger = trigger, startedAt = started, finishedAt = null, status = "RUNNING"))
-        val password = secureStore.getString(SecureStore.MAIL_PASSWORD)
+        val password = secureStore.getString(SecureStore.MAIL_PASSWORD)?.let(::cleanPassword)
         if (cfg.email.isBlank() || password.isNullOrEmpty()) {
             return@withContext finish(runId, trigger, started, "FAILED", IngestStats(), 0, 0, "Mail hesabı konfiqurasiya edilməyib (Ayarlar → Mail.ru)")
         }
@@ -249,11 +250,25 @@ class DirectMailSync(
         return filter.split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.any { v.contains(it) }
     }
 
+    companion object {
+        fun cleanPassword(p: String): String = p.filterNot { it.isWhitespace() }
+    }
+
     private fun humanize(e: Throwable): String {
         val msg = e.message.orEmpty()
         return when {
-            e is AuthenticationFailedException ->
-                "Autentifikasiya uğursuz oldu. Mail.ru-da \"Xarici tətbiqlər üçün parol\" yaradıb onu daxil edin."
+            e is AuthenticationFailedException -> {
+                val reply = msg.trim()
+                val hint = when {
+                    Regex("(?i)application password|app password|пароль для внешн").containsMatchIn(reply) ->
+                        "Mail.ru xarici tətbiq parolu tələb edir — əsas hesab şifrəsi qəbul olunmur."
+                    Regex("(?i)disabled|not allowed|imap.*(off|запрещ|отключ)|доступ").containsMatchIn(reply) ->
+                        "Hesabda IMAP girişi bağlıdır: Mail.ru → Ayarlar → \"Poçt proqramları\" bölməsində IMAP ilə girişi aktiv edin."
+                    else ->
+                        "Email və ya tətbiq parolu yanlışdır. Parolu yaradarkən giriş növü \"IMAP / tam giriş\" seçilməlidir və IMAP aktiv olmalıdır."
+                }
+                if (reply.isNotEmpty()) "$hint\nServer cavabı: ${reply.take(200)}" else hint
+            }
             e.cause is java.net.UnknownHostException || e is java.net.UnknownHostException -> "Server tapılmadı. İnternet bağlantısını yoxlayın."
             e.cause is java.net.SocketTimeoutException -> "Bağlantı vaxtı bitdi."
             e.cause is javax.net.ssl.SSLException -> "SSL/TLS xətası: ${e.cause?.message}"

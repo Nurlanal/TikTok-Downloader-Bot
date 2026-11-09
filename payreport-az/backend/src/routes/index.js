@@ -178,7 +178,7 @@ router.put('/mail/config', requireAdmin, wrap(async (req, res) => {
     initial_days: Math.min(Math.max(parseInt(b.initialDays || (existing && existing.initial_days) || 30, 10), 1), 3650),
     enabled: b.enabled === undefined ? (existing ? existing.enabled : 1) : b.enabled ? 1 : 0,
   };
-  if (b.password) fields.password_enc = encryptSecret(String(b.password));
+  if (b.password) fields.password_enc = encryptSecret(String(b.password).replace(/\s/g, ''));
   if (existing) {
     // Hesab dəyişirsə UID kursorunu sıfırlayırıq (Message-ID ilə təkrarlar yenə bloklanır)
     if (existing.email !== email || existing.host !== fields.host || existing.mailbox !== fields.mailbox) {
@@ -202,7 +202,7 @@ router.post('/mail/test', requireAdmin, wrap(async (req, res) => {
   const existing = await worker.getAccount();
   const params = {
     email: b.email || (existing && existing.email),
-    password: b.password || (existing ? decryptSecret(existing.password_enc) : null),
+    password: b.password ? String(b.password).replace(/\s/g, '') : existing ? decryptSecret(existing.password_enc) : null,
     host: b.host || (existing && existing.host) || 'imap.mail.ru',
     port: parseInt(b.port || (existing && existing.port) || 993, 10),
     secure: b.secure === undefined ? (existing ? !!existing.secure : true) : !!b.secure,
