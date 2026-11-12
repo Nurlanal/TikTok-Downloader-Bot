@@ -1,5 +1,6 @@
 package az.siqaret.anbar.util
 
+import az.siqaret.anbar.data.Firm
 import az.siqaret.anbar.data.HistoryEntry
 import az.siqaret.anbar.data.HistoryType
 import az.siqaret.anbar.data.Product
@@ -59,12 +60,35 @@ data class DaySummary(
     }
 }
 
+/** Bir firmadan alınan siqaretlərin xülasəsi. firm == null -> "Firmasız". */
+data class FirmSummary(val firm: Firm?, val products: List<Product>) {
+    val name: String get() = firm?.name ?: NO_FIRM
+    val stats: InventoryStats = InventoryStats.from(products)
+
+    companion object {
+        const val NO_FIRM = "Firmasız"
+
+        /** Firmalar ada görə, sonda "Firmasız" (yalnız belə məhsul varsa). */
+        fun group(products: List<Product>, firms: List<Firm>): List<FirmSummary> {
+            val byFirm = products.groupBy { it.firmId }
+            val known = firms.map { FirmSummary(it, byFirm[it.id].orEmpty()) }
+            val ids = firms.map { it.id }.toSet()
+            val orphans = products.filter { it.firmId == null || it.firmId !in ids }
+            return if (orphans.isEmpty()) known else known + FirmSummary(null, orphans)
+        }
+    }
+}
+
 data class ReportData(
     val products: List<Product>,
     val history: List<HistoryEntry>,
     val period: Period,
     val generatedAt: Long,
+    val firms: List<Firm> = emptyList(),
 ) {
     val stats: InventoryStats get() = InventoryStats.from(products)
     val days: List<DaySummary> get() = DaySummary.group(history)
+    val firmSummaries: List<FirmSummary> get() = FirmSummary.group(products, firms)
+    private val firmNames: Map<Long, String> by lazy { firms.associate { it.id to it.name } }
+    fun firmName(p: Product): String = p.firmId?.let { firmNames[it] } ?: ""
 }

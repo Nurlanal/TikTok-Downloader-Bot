@@ -47,6 +47,7 @@ object XlsxExporter {
             put("xl/worksheets/sheet1.xml", productsSheet(data))
             put("xl/worksheets/sheet2.xml", historySheet(data))
             put("xl/worksheets/sheet3.xml", dailySheet(data))
+            put("xl/worksheets/sheet4.xml", firmsSheet(data))
         }
     }
 
@@ -57,7 +58,7 @@ object XlsxExporter {
         rows += listOf(Str("Siqaret anbarı — stok hesabatı", S_TITLE))
         rows += listOf(Str("Tarix: ${Fmt.dateTime(data.generatedAt)}", S_SUB))
         rows.add(emptyList())
-        rows += listOf("№", "Siqaretin adı", "Qutu qiyməti", "Blok qiyməti", "Blok sayı", "Qutu sayı", "Ümumi məbləğ")
+        rows += listOf("№", "Siqaretin adı", "Firma", "Paçka qiyməti", "Blok qiyməti", "Blok sayı", "Paçka sayı", "Ümumi məbləğ")
             .map { Str(it, S_HEADER) }
         val first = rows.size + 1
         data.products.forEachIndexed { i, p ->
@@ -65,11 +66,12 @@ object XlsxExporter {
             rows += listOf(
                 Num((i + 1).toDouble(), S_INT),
                 Str(p.name),
+                Str(data.firmName(p).ifEmpty { FirmSummary.NO_FIRM }),
                 Num(p.boxPrice),
                 Num(p.blockPrice),
                 Num(p.blockCount.toDouble(), S_INT),
-                Formula("E$r*${InventoryCalc.BOXES_PER_BLOCK}", p.totalBoxes.toDouble(), S_INT),
-                Formula("ROUND(E$r*D$r,2)", p.totalAmount, S_MONEY),
+                Formula("F$r*${InventoryCalc.BOXES_PER_BLOCK}", p.totalBoxes.toDouble(), S_INT),
+                Formula("ROUND(F$r*E$r,2)", p.totalAmount, S_MONEY),
             )
         }
         val last = rows.size
@@ -78,17 +80,58 @@ object XlsxExporter {
         fun sum(col: Char, cached: Double, style: Int): Cell =
             if (hasRows) Formula("SUM($col$first:$col$last)", cached, style) else Num(0.0, style)
         rows += listOf(
-            Str("", S_TOTAL_LABEL), Str("CƏMİ", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL),
-            sum('E', s.totalBlocks.toDouble(), S_TOTAL_INT),
-            sum('F', s.totalBoxes.toDouble(), S_TOTAL_INT),
-            sum('G', s.totalValue, S_TOTAL_MONEY),
+            Str("", S_TOTAL_LABEL), Str("CƏMİ", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL),
+            Str("", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL),
+            sum('F', s.totalBlocks.toDouble(), S_TOTAL_INT),
+            sum('G', s.totalBoxes.toDouble(), S_TOTAL_INT),
+            sum('H', s.totalValue, S_TOTAL_MONEY),
         )
         rows.add(emptyList())
         rows += listOf(Empty, Str("Ümumi məhsul sayı", S_TOTAL_LABEL), Num(s.productCount.toDouble(), S_TOTAL_INT))
         rows += listOf(Empty, Str("Ümumi blok sayı", S_TOTAL_LABEL), Num(s.totalBlocks.toDouble(), S_TOTAL_INT))
-        rows += listOf(Empty, Str("Ümumi qutu sayı", S_TOTAL_LABEL), Num(s.totalBoxes.toDouble(), S_TOTAL_INT))
+        rows += listOf(Empty, Str("Ümumi paçka sayı", S_TOTAL_LABEL), Num(s.totalBoxes.toDouble(), S_TOTAL_INT))
         rows += listOf(Empty, Str("Ümumi stok dəyəri", S_TOTAL_LABEL), Num(s.totalValue, S_TOTAL_MONEY))
-        return sheet(rows, listOf(6.0, 32.0, 14.0, 14.0, 12.0, 12.0, 18.0), freezeRow = 4)
+        return sheet(rows, listOf(6.0, 30.0, 22.0, 14.0, 14.0, 12.0, 12.0, 18.0), freezeRow = 4)
+    }
+
+    /** Firmalar üzrə xülasə: hər firmadan alınan siqaretlər. Rəqəmlər "Məhsullar" vərəqindən SUMIF ilə hesablanır. */
+    private fun firmsSheet(data: ReportData): String {
+        val rows = mutableListOf<List<Cell>>()
+        rows += listOf(Str("Firmalar üzrə xülasə", S_TITLE))
+        rows.add(emptyList())
+        rows += listOf("Firma", "Telefon", "Siqaret növü", "Blok sayı", "Paçka sayı", "Stok dəyəri").map { Str(it, S_HEADER) }
+        val n = data.products.size
+        val firstP = 5
+        val lastP = 4 + n
+        val src = "'Məhsullar'!"
+        fun rng(c: Char) = "$src\$$c\$$firstP:\$$c\$$lastP"
+        val firstRow = rows.size + 1
+        data.firmSummaries.forEach { f ->
+            val r = rows.size + 1
+            val st = f.stats
+            rows += if (n > 0) listOf(
+                Str(f.name), Str(f.firm?.phone ?: ""),
+                Formula("COUNTIF(${rng('C')},A$r)", st.productCount.toDouble(), S_INT),
+                Formula("SUMIF(${rng('C')},A$r,${rng('F')})", st.totalBlocks.toDouble(), S_INT),
+                Formula("SUMIF(${rng('C')},A$r,${rng('G')})", st.totalBoxes.toDouble(), S_INT),
+                Formula("SUMIF(${rng('C')},A$r,${rng('H')})", st.totalValue, S_MONEY),
+            ) else listOf(
+                Str(f.name), Str(f.firm?.phone ?: ""),
+                Num(0.0, S_INT), Num(0.0, S_INT), Num(0.0, S_INT), Num(0.0, S_MONEY),
+            )
+        }
+        val lastRow = rows.size
+        if (data.firmSummaries.isNotEmpty()) {
+            val t = data.stats
+            rows += listOf(
+                Str("CƏMİ", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL),
+                Formula("SUM(C$firstRow:C$lastRow)", t.productCount.toDouble(), S_TOTAL_INT),
+                Formula("SUM(D$firstRow:D$lastRow)", t.totalBlocks.toDouble(), S_TOTAL_INT),
+                Formula("SUM(E$firstRow:E$lastRow)", t.totalBoxes.toDouble(), S_TOTAL_INT),
+                Formula("SUM(F$firstRow:F$lastRow)", t.totalValue, S_TOTAL_MONEY),
+            )
+        }
+        return sheet(rows, listOf(28.0, 18.0, 14.0, 12.0, 12.0, 18.0), freezeRow = 3)
     }
 
     private fun historySheet(data: ReportData): String {
@@ -186,6 +229,7 @@ object XlsxExporter {
 <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
 </Types>"""
@@ -203,6 +247,7 @@ object XlsxExporter {
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <sheets>
 <sheet name="Məhsullar" sheetId="1" r:id="rId1"/>
+<sheet name="Firmalar" sheetId="4" r:id="rId5"/>
 <sheet name="Tarixçə" sheetId="2" r:id="rId2"/>
 <sheet name="Gündəlik" sheetId="3" r:id="rId3"/>
 </sheets>
@@ -215,6 +260,7 @@ object XlsxExporter {
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
 <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
 <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+<Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/>
 </Relationships>"""
 
     private fun styles() = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

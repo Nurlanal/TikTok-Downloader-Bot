@@ -5,16 +5,29 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import az.siqaret.anbar.util.InventoryCalc
 
-/** Siqaret məhsulu. Ümumi qutu sayı və ümumi məbləğ həmişə real vaxtda hesablanır. */
-@Entity(tableName = "products", indices = [Index("name")])
+/** Siqaret məhsulu. Ümumi paçka sayı və ümumi məbləğ həmişə real vaxtda hesablanır. */
+@Entity(tableName = "products", indices = [Index("name"), Index("firmId")])
 data class Product(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    /** Bir paçkanın qiyməti */
     val boxPrice: Double,
     val blockPrice: Double,
     val blockCount: Int,
     val createdAt: Long,
     val updatedAt: Long,
+    /** Siqaretin alındığı firma (null = firma seçilməyib) */
+    val firmId: Long? = null,
+)
+
+/** Siqaretlərin alındığı firma (təchizatçı). */
+@Entity(tableName = "firms", indices = [Index("name")])
+data class Firm(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val phone: String = "",
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
 )
 
 /** Blok sayı × 10 */

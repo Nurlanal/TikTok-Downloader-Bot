@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -31,6 +32,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -60,7 +66,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import az.siqaret.anbar.InventoryViewModel
+import az.siqaret.anbar.data.Firm
 import az.siqaret.anbar.data.Product
 import az.siqaret.anbar.ui.components.AnimatedValueText
 import az.siqaret.anbar.ui.components.GradientCard
@@ -75,7 +83,12 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Unit) {
+fun ProductEditScreen(
+    vm: InventoryViewModel,
+    productId: Long?,
+    initialFirmId: Long? = null,
+    onBack: () -> Unit,
+) {
     val isEdit = productId != null
     var loaded by rememberSaveable { mutableStateOf(!isEdit) }
     var original by remember { mutableStateOf<Product?>(null) }
@@ -85,6 +98,9 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
     var blockText by rememberSaveable { mutableStateOf("") }
     var blocksText by rememberSaveable { mutableStateOf("") }
     var linked by rememberSaveable { mutableStateOf(true) }
+    var firmId by rememberSaveable { mutableStateOf(initialFirmId) }
+    var creatingFirm by remember { mutableStateOf(false) }
+    val firms by vm.firms.collectAsStateWithLifecycle()
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -99,6 +115,7 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
                 boxText = Fmt.inputNumber(p.boxPrice)
                 blockText = Fmt.inputNumber(p.blockPrice)
                 blocksText = p.blockCount.toString()
+                firmId = p.firmId
                 linked = abs(InventoryCalc.blockPriceFromBox(p.boxPrice) - p.blockPrice) < 0.005
                 loaded = true
             }
@@ -131,7 +148,7 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
     fun save() {
         if (saving) return
         saving = true
-        vm.saveProduct(productId, name, boxPrice, blockPrice, blocks) { err ->
+        vm.saveProduct(productId, name, boxPrice, blockPrice, blocks, firmId?.takeIf { id -> firms.any { it.id == id } }) { err ->
             saving = false
             if (err == null) onBack() else error = err
         }
@@ -188,7 +205,7 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
                     VSpace(14.dp)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         LiveTile("Blok sayı", Fmt.count(blocks ?: 0), Modifier.weight(1f))
-                        LiveTile("Ümumi qutu", Fmt.count(totalBoxes), Modifier.weight(1f))
+                        LiveTile("Ümumi paçka", Fmt.count(totalBoxes), Modifier.weight(1f))
                     }
                     VSpace(12.dp)
                     Text(
@@ -196,10 +213,19 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
                         color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
-                        "${Fmt.count(blocks ?: 0)} blok × ${InventoryCalc.BOXES_PER_BLOCK} = ${Fmt.count(totalBoxes)} qutu",
+                        "${Fmt.count(blocks ?: 0)} blok × ${InventoryCalc.BOXES_PER_BLOCK} = ${Fmt.count(totalBoxes)} paçka",
                         color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall,
                     )
                 }
+            }
+
+            FieldCard {
+                FirmPicker(
+                    firms = firms,
+                    selectedId = firmId,
+                    onSelect = { firmId = it; error = null },
+                    onCreate = { creatingFirm = true },
+                )
             }
 
             FieldCard {
@@ -215,7 +241,7 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
                 BigField(
                     value = boxText,
                     onChange = ::onBoxChange,
-                    label = "Bir qutunun qiyməti (₼)",
+                    label = "Bir paçkanın qiyməti (₼)",
                     placeholder = "0.00",
                     icon = { Icon3D(Icons.Filled.Inventory2, Gradients.Teal, size = 34.dp) },
                     keyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
@@ -234,7 +260,7 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
                     Column(Modifier.weight(1f)) {
                         Text("Avtomatik qiymət", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Blok qiyməti = qutu qiyməti × ${InventoryCalc.BOXES_PER_BLOCK}",
+                            "Blok qiyməti = paçka qiyməti × ${InventoryCalc.BOXES_PER_BLOCK}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -321,6 +347,13 @@ fun ProductEditScreen(vm: InventoryViewModel, productId: Long?, onBack: () -> Un
         }
     }
 
+    if (creatingFirm) {
+        FirmDialog(vm, firm = null, onDismiss = { creatingFirm = false }, onSaved = { id ->
+            firmId = id
+            creatingFirm = false
+        })
+    }
+
     if (confirmDelete) {
         val p = original
         AlertDialog(
@@ -403,4 +436,57 @@ private fun StepButton(
         modifier = Modifier.size(58.dp),
         shape = RoundedCornerShape(18.dp),
     ) { Icon(icon, description, modifier = Modifier.size(28.dp)) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FirmPicker(
+    firms: List<Firm>,
+    selectedId: Long?,
+    onSelect: (Long?) -> Unit,
+    onCreate: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val selected = firms.firstOrNull { it.id == selectedId }
+    Text("Firma (haradan alınıb)", style = MaterialTheme.typography.titleSmall)
+    VSpace(10.dp)
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
+        OutlinedTextField(
+            value = selected?.name ?: "Firma seçilməyib",
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            leadingIcon = {
+                Box(Modifier.padding(start = 8.dp, end = 4.dp)) {
+                    Icon3D(Icons.Filled.Business, if (selected != null) Gradients.forName(selected.name) else Gradients.Slate, size = 34.dp)
+                }
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            shape = RoundedCornerShape(16.dp),
+            textStyle = MaterialTheme.typography.titleMedium,
+            colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text("Firma seçilməyib") },
+                onClick = { onSelect(null); open = false },
+                trailingIcon = { if (selected == null) Icon(Icons.Filled.Check, null) },
+            )
+            firms.forEach { f ->
+                DropdownMenuItem(
+                    text = { Text(f.name) },
+                    leadingIcon = { Icon(Icons.Filled.Business, null) },
+                    trailingIcon = { if (f.id == selectedId) Icon(Icons.Filled.Check, null) },
+                    onClick = { onSelect(f.id); open = false },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Yeni firma əlavə et", color = MaterialTheme.colorScheme.primary) },
+                leadingIcon = { Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = { open = false; onCreate() },
+            )
+        }
+    }
 }

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Assessment
+import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Icon
@@ -46,6 +48,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import az.siqaret.anbar.ui.components.LocalSnackbarHost
+import az.siqaret.anbar.ui.screens.FirmDetailScreen
+import az.siqaret.anbar.ui.screens.FirmsScreen
 import az.siqaret.anbar.ui.screens.HistoryScreen
 import az.siqaret.anbar.ui.screens.HomeScreen
 import az.siqaret.anbar.ui.screens.ProductEditScreen
@@ -81,6 +85,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 
 private val tabs = listOf(
     Tab("home", "Ana səhifə", Icons.Outlined.Home, Icons.Filled.Home),
+    Tab("firms", "Firmalar", Icons.Outlined.Business, Icons.Filled.Business),
     Tab("history", "Tarixçə", Icons.Outlined.History, Icons.Filled.History),
     Tab("report", "Hesabat", Icons.Outlined.Assessment, Icons.Filled.Assessment),
 )
@@ -146,18 +151,38 @@ fun AppRoot(vm: InventoryViewModel) {
             composable("home") {
                 HomeScreen(
                     vm,
-                    onAdd = { nav.navigate("edit") },
+                    onAdd = {
+                        val f = vm.firmFilter.value?.takeIf { it > 0 }
+                        nav.navigate(if (f != null) "edit?firmId=$f" else "edit")
+                    },
                     onEdit = { id -> nav.navigate("edit?id=$id") },
+                )
+            }
+            composable("firms") { FirmsScreen(vm, onOpen = { id -> nav.navigate("firm/$id") }) }
+            composable(
+                "firm/{firmId}",
+                arguments = listOf(navArgument("firmId") { type = NavType.LongType }),
+            ) { back ->
+                FirmDetailScreen(
+                    vm,
+                    firmId = back.arguments?.getLong("firmId") ?: InventoryViewModel.NO_FIRM_FILTER,
+                    onBack = { nav.popBackStack() },
+                    onAddProduct = { f -> nav.navigate(if (f != null) "edit?firmId=$f" else "edit") },
+                    onEditProduct = { id -> nav.navigate("edit?id=$id") },
                 )
             }
             composable("history") { HistoryScreen(vm) }
             composable("report") { ReportScreen(vm) }
             composable(
-                "edit?id={id}",
-                arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L }),
+                "edit?id={id}&firmId={firmId}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType; defaultValue = -1L },
+                    navArgument("firmId") { type = NavType.LongType; defaultValue = -1L },
+                ),
             ) { back ->
                 val id = back.arguments?.getLong("id")?.takeIf { it > 0 }
-                ProductEditScreen(vm, id, onBack = { nav.popBackStack() })
+                val firmId = back.arguments?.getLong("firmId")?.takeIf { it > 0 }
+                ProductEditScreen(vm, id, initialFirmId = firmId, onBack = { nav.popBackStack() })
             }
         }
         }

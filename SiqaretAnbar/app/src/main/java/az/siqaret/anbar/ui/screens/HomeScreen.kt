@@ -1,6 +1,8 @@
 package az.siqaret.anbar.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
@@ -45,6 +48,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -94,6 +99,7 @@ import az.siqaret.anbar.ui.components.VSpace
 import az.siqaret.anbar.ui.theme.Gradients
 import az.siqaret.anbar.ui.theme.NegativeColor
 import az.siqaret.anbar.ui.theme.PositiveColor
+import az.siqaret.anbar.util.FirmSummary
 import az.siqaret.anbar.util.Fmt
 import az.siqaret.anbar.util.InventoryCalc
 
@@ -109,6 +115,9 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
     val query by vm.query.collectAsStateWithLifecycle()
     val sort by vm.sort.collectAsStateWithLifecycle()
     val theme by vm.themeMode.collectAsStateWithLifecycle()
+    val firms by vm.firms.collectAsStateWithLifecycle()
+    val firmFilter by vm.firmFilter.collectAsStateWithLifecycle()
+    val firmNames = remember(firms) { firms.associate { it.id to it.name } }
 
     var deleting by remember { mutableStateOf<Product?>(null) }
     var adjusting by remember { mutableStateOf<Product?>(null) }
@@ -170,7 +179,7 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
                             )
                             VSpace(4.dp)
                             Text(
-                                "${Fmt.count(stats.totalBlocks)} blok · ${Fmt.count(stats.totalBoxes)} qutu",
+                                "${Fmt.count(stats.totalBlocks)} blok · ${Fmt.count(stats.totalBoxes)} paçka",
                                 color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -182,11 +191,21 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatCard(Icons.Filled.Category, Gradients.Violet, "Məhsul sayı", Fmt.count(stats.productCount), Modifier.weight(1f))
                     StatCard(Icons.Filled.ViewInAr, Gradients.Blue, "Ümumi blok", Fmt.count(stats.totalBlocks), Modifier.weight(1f))
-                    StatCard(Icons.Filled.Inventory2, Gradients.Teal, "Ümumi qutu", Fmt.count(stats.totalBoxes), Modifier.weight(1f))
+                    StatCard(Icons.Filled.Inventory2, Gradients.Teal, "Ümumi paçka", Fmt.count(stats.totalBoxes), Modifier.weight(1f))
                 }
             }
             item(key = "search") {
                 SearchBarRow(query, { vm.query.value = it }, sort, { vm.sort.value = it })
+            }
+            if (firms.isNotEmpty()) {
+                item(key = "firmFilter") {
+                    FirmFilterRow(
+                        firms = firms,
+                        selected = firmFilter,
+                        showNoFirm = all.any { it.firmId == null || it.firmId !in firmNames },
+                        onSelect = { vm.firmFilter.value = it },
+                    )
+                }
             }
             if (products.isEmpty()) {
                 item(key = "empty") {
@@ -195,8 +214,10 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
                             Icons.Filled.SmokingRooms, "Hələ məhsul yoxdur",
                             "\"Məhsul əlavə et\" düyməsi ilə ilk siqareti əlavə edin. Ad, qiymət və blok sayını yazın — qalanını proqram hesablayacaq.",
                         )
-                    } else {
+                    } else if (query.isNotBlank()) {
                         EmptyState(Icons.Filled.SearchOff, "Heç nə tapılmadı", "\"$query\" adına uyğun məhsul yoxdur")
+                    } else {
+                        EmptyState(Icons.Filled.Business, "Bu firmada siqaret yoxdur", "Başqa firma seçin və ya yeni siqaret əlavə edin")
                     }
                 }
             } else {
@@ -211,6 +232,7 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
             items(products, key = { it.id }) { p ->
                 ProductCard(
                     product = p,
+                    firmName = p.firmId?.let { firmNames[it] },
                     onClick = { onEdit(p.id) },
                     onPlus = { vm.adjustStock(p, 1) },
                     onMinus = { vm.adjustStock(p, -1) },
@@ -224,7 +246,7 @@ fun HomeScreen(vm: InventoryViewModel, onAdd: () -> Unit, onEdit: (Long) -> Unit
     }
 
     deleting?.let { p ->
-        DeleteDialog(p, onDismiss = { deleting = null }, onConfirm = { vm.deleteProduct(p); deleting = null })
+        ProductDeleteDialog(p, onDismiss = { deleting = null }, onConfirm = { vm.deleteProduct(p); deleting = null })
     }
     adjusting?.let { p ->
         // ən son vəziyyəti göstər
@@ -287,6 +309,7 @@ private fun SearchBarRow(
 @Composable
 fun ProductCard(
     product: Product,
+    firmName: String?,
     onClick: () -> Unit,
     onPlus: () -> Unit,
     onMinus: () -> Unit,
@@ -312,8 +335,22 @@ fun ProductCard(
                         product.name, style = MaterialTheme.typography.titleMedium,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
+                    if (firmName != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.Business, null, modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            HSpace(4.dp)
+                            Text(
+                                firmName, style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                     Text(
-                        "Blok: ${Fmt.money(product.blockPrice)}  ·  Qutu: ${Fmt.money(product.boxPrice)}",
+                        "Blok: ${Fmt.money(product.blockPrice)}  ·  Paçka: ${Fmt.money(product.boxPrice)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -342,7 +379,7 @@ fun ProductCard(
             VSpace(14.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoPill("Blok sayı", Fmt.count(product.blockCount), Modifier.weight(0.8f))
-                InfoPill("Qutu sayı", Fmt.count(product.totalBoxes), Modifier.weight(0.9f))
+                InfoPill("Paçka sayı", Fmt.count(product.totalBoxes), Modifier.weight(0.9f))
                 InfoPill("Ümumi məbləğ", Fmt.money(product.totalAmount), Modifier.weight(1.5f), highlight = true)
             }
             VSpace(12.dp)
@@ -377,7 +414,7 @@ fun ProductCard(
 }
 
 @Composable
-private fun DeleteDialog(p: Product, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun ProductDeleteDialog(p: Product, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon3D(Icons.Filled.Delete, Gradients.Red, size = 52.dp) },
@@ -408,7 +445,7 @@ fun StockDialog(p: Product, onDismiss: () -> Unit, onApply: (Int) -> Unit) {
         text = {
             Column {
                 Text(
-                    "Hazırda: ${Fmt.count(p.blockCount)} blok (${Fmt.count(p.totalBoxes)} qutu)",
+                    "Hazırda: ${Fmt.count(p.blockCount)} blok (${Fmt.count(p.totalBoxes)} paçka)",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 VSpace(12.dp)
@@ -455,4 +492,42 @@ fun StockDialog(p: Product, onDismiss: () -> Unit, onApply: (Int) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Bağla") } },
     )
+}
+
+@Composable
+private fun FirmFilterRow(
+    firms: List<az.siqaret.anbar.data.Firm>,
+    selected: Long?,
+    showNoFirm: Boolean,
+    onSelect: (Long?) -> Unit,
+) {
+    val colors = FilterChipDefaults.filterChipColors(
+        selectedContainerColor = MaterialTheme.colorScheme.primary,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+    )
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = selected == null, onClick = { onSelect(null) },
+            label = { Text("Bütün firmalar") }, shape = RoundedCornerShape(14.dp), colors = colors,
+        )
+        firms.forEach { f ->
+            FilterChip(
+                selected = selected == f.id, onClick = { onSelect(f.id) },
+                label = { Text(f.name, maxLines = 1) },
+                leadingIcon = { Icon(Icons.Filled.Business, null, Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(14.dp), colors = colors,
+            )
+        }
+        if (showNoFirm) {
+            FilterChip(
+                selected = selected == InventoryViewModel.NO_FIRM_FILTER,
+                onClick = { onSelect(InventoryViewModel.NO_FIRM_FILTER) },
+                label = { Text(FirmSummary.NO_FIRM) }, shape = RoundedCornerShape(14.dp), colors = colors,
+            )
+        }
+    }
 }

@@ -57,6 +57,7 @@ object PdfExporter {
             header()
             summary()
             productsTable()
+            firmsTable()
             history()
             finishPage()
         }
@@ -101,7 +102,7 @@ object PdfExporter {
             val items = listOf(
                 "Məhsul sayı" to Fmt.count(s.productCount),
                 "Ümumi blok" to Fmt.count(s.totalBlocks),
-                "Ümumi qutu" to Fmt.count(s.totalBoxes),
+                "Ümumi paçka" to Fmt.count(s.totalBoxes),
                 "Stok dəyəri" to Fmt.moneyAzn(s.totalValue),
             )
             val gap = 8f
@@ -147,9 +148,9 @@ object PdfExporter {
         private fun productsTable() {
             sectionTitle("Məhsulların siyahısı")
             val cols = listOf(
-                Col("№", 24f), Col("Siqaretin adı", 167f), Col("Qutu qiy.", 66f, true),
-                Col("Blok qiy.", 66f, true), Col("Blok", 50f, true), Col("Qutu", 54f, true),
-                Col("Məbləğ", contentW - 427f, true),
+                Col("№", 22f), Col("Siqaretin adı", 128f), Col("Firma", 92f), Col("Paçka qiy.", 54f, true),
+                Col("Blok qiy.", 56f, true), Col("Blok", 40f, true), Col("Paçka", 46f, true),
+                Col("Məbləğ", contentW - 438f, true),
             )
             tableHeader(cols)
             if (data.products.isEmpty()) {
@@ -165,7 +166,7 @@ object PdfExporter {
                 drawRow(
                     cols,
                     listOf(
-                        "${i + 1}", p.name, Fmt.number(p.boxPrice), Fmt.number(p.blockPrice),
+                        "${i + 1}", p.name, data.firmName(p).ifEmpty { "—" }, Fmt.number(p.boxPrice), Fmt.number(p.blockPrice),
                         Fmt.count(p.blockCount), Fmt.count(p.totalBoxes), Fmt.number(p.totalAmount),
                     ),
                     y + 12.5f, text,
@@ -178,10 +179,38 @@ object PdfExporter {
             c.drawRoundRect(RectF(margin, y + 2f, margin + contentW, y + 24f), 6f, 6f, fill)
             drawRow(
                 cols,
-                listOf("", "CƏMİ", "", "", Fmt.count(s.totalBlocks), Fmt.count(s.totalBoxes), Fmt.moneyAzn(s.totalValue)),
+                listOf("", "CƏMİ", "", "", "", Fmt.count(s.totalBlocks), Fmt.count(s.totalBoxes), Fmt.moneyAzn(s.totalValue)),
                 y + 17f, bold,
             )
             y += 40f
+        }
+
+        private fun firmsTable() {
+            val list = data.firmSummaries
+            if (list.isEmpty() || list.all { it.firm == null }) return
+            sectionTitle("Firmalar üzrə xülasə")
+            val cols = listOf(
+                Col("Firma", 170f), Col("Telefon", 95f), Col("Növ", 50f, true),
+                Col("Blok", 55f, true), Col("Paçka", 60f, true), Col("Stok dəyəri", contentW - 430f, true),
+            )
+            tableHeader(cols)
+            list.forEachIndexed { i, f ->
+                ensure(20f) { tableHeader(cols) }
+                if (i % 2 == 1) {
+                    fill.color = zebra
+                    c.drawRect(margin, y, margin + contentW, y + 18f, fill)
+                }
+                drawRow(
+                    cols,
+                    listOf(
+                        f.name, f.firm?.phone.orEmpty(), Fmt.count(f.stats.productCount),
+                        Fmt.count(f.stats.totalBlocks), Fmt.count(f.stats.totalBoxes), Fmt.number(f.stats.totalValue),
+                    ),
+                    y + 12.5f, text,
+                )
+                y += 18f
+            }
+            y += 22f
         }
 
         private fun history() {

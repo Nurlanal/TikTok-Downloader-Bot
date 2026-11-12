@@ -2,23 +2,35 @@
 
 Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android tətbiqi.
 
-**Hazır APK:** [`apk/SiqaretAnbar-1.0.0.apk`](apk/SiqaretAnbar-1.0.0.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin).
+**Hazır APK:** [`apk/SiqaretAnbar-1.1.0.apk`](apk/SiqaretAnbar-1.1.0.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin). 1.0.0 versiyası quraşdırılıbsa, üstündən yazın: məlumatlar saxlanılır.
 
-| Ana səhifə | Yeni məhsul (canlı hesablama) | Tarixçə | Hesabat | Qaranlıq rejim |
-|---|---|---|---|---|
-| ![](docs/screenshots/04_home.png) | ![](docs/screenshots/02_add_product_live_calc.png) | ![](docs/screenshots/05_history.png) | ![](docs/screenshots/06_report.png) | ![](docs/screenshots/08_home_dark.png) |
+| Ana səhifə | Firmalar | Firmanın siqaretləri | Firmaya siqaret əlavə et |
+|---|---|---|---|
+| ![](docs/screenshots/04_home.png) | ![](docs/screenshots/12_firms.png) | ![](docs/screenshots/11_firm_detail.png) | ![](docs/screenshots/10_add_to_firm.png) |
+
+| Canlı hesablama | Tarixçə | Hesabat | Qaranlıq rejim |
+|---|---|---|---|
+| ![](docs/screenshots/02_add_product_live_calc.png) | ![](docs/screenshots/05_history.png) | ![](docs/screenshots/06_report.png) | ![](docs/screenshots/08_home_dark.png) |
 
 ## İmkanlar
 
-**Məhsul məlumatları:** ad, bir qutunun qiyməti, bir blokun qiyməti, blok sayı, ümumi qutu sayı, ümumi məbləğ.
+**Firmalar (1.1.0):**
+- Siqaret alınan firmaları əlavə edin: ad, telefon (istəyə görə), qeyd. Firmanı redaktə etmək və silmək olar.
+- Firmanın səhifəsində həmin firmadan alınan siqaretlər, firmanın stok dəyəri, blok və paçka sayı göstərilir. Telefona basanda zəng ekranı açılır.
+- Firmanın səhifəsində "Siqaret əlavə et" basılanda firma avtomatik seçilir. Məhsul formasında firmanı dəyişmək və ya oradan yeni firma yaratmaq olar.
+- Eyni marka fərqli firmalardan alına bilər (eyni firmada isə ad təkrarlana bilməz).
+- Ana səhifədə firmaya görə filtr var. Firma silinəndə onun siqaretləri silinmir, "Firmasız" bölməsinə keçir.
+- Hesabatda "Firmalar üzrə" bölməsi var. PDF-də firma sütunu və firma xülasəsi, Excel-də "Firma" sütunu və "Firmalar" vərəqi əlavə olunub (SUMIF formulları ilə).
+
+**Məhsul məlumatları:** ad, firma, bir paçkanın qiyməti, bir blokun qiyməti, blok sayı, ümumi paçka sayı, ümumi məbləğ.
 
 **Hesablama (real vaxtda):**
 - `Blok sayı × bir blokun qiyməti = ümumi məbləğ`
-- `Blok sayı × 10 = ümumi qutu sayı`
-- "Avtomatik qiymət" açıqdırsa: qutu qiymətini yazanda blok qiyməti (× 10) özü doldurulur və əksinə.
+- `Blok sayı × 10 = ümumi paçka sayı`
+- "Avtomatik qiymət" açıqdırsa: paçka qiymətini yazanda blok qiyməti (× 10) özü doldurulur və əksinə.
 - Hesablamalar `BigDecimal` ilə aparılır, ona görə qəpik xətası olmur.
 
-**Ana səhifə:** ümumi stok dəyəri, məhsul sayı, ümumi blok sayı, ümumi qutu sayı.
+**Ana səhifə:** ümumi stok dəyəri, məhsul sayı, ümumi blok sayı, ümumi paçka sayı.
 
 **Məhsul idarəetməsi:** əlavə et, redaktə et, sil (snackbar-dan "Geri qaytar" mümkündür), ada görə axtarış, ada/qiymətə/məbləğə/stoka görə sıralama. Hər kartda böyük **−/+** düymələri var, "Stok miqdarını dəyiş" pəncərəsi ilə istənilən miqdar artırılıb-azaldıla bilər. Eyni adlı məhsulun təkrar əlavə edilməsinin qarşısı alınır.
 
@@ -26,7 +38,7 @@ Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android
 
 **Hesabat və ixrac:**
 - **PDF** (A4): xülasə, məhsul cədvəli və CƏMİ sətri, seçilmiş dövr üçün gündəlik tarixçə. Səhifələr avtomatik bölünür.
-- **Excel (.xlsx)**: 3 vərəq (Məhsullar, Tarixçə, Gündəlik). Məbləğ və cəmlər Excel formulları ilə yazılır (`=ROUND(E5*D5,2)`, `=SUM(...)`), valyuta formatı ₼.
+- **Excel (.xlsx)**: 4 vərəq (Məhsullar, Firmalar, Tarixçə, Gündəlik). Məbləğ və cəmlər Excel formulları ilə yazılır (`=ROUND(E5*D5,2)`, `=SUM(...)`), valyuta formatı ₼.
 - Fayl istifadəçinin seçdiyi yerə saxlanılır, sonra "Paylaş" ilə WhatsApp, e-poçt və s. vasitəsilə göndərilə bilər.
 
 **Dizayn:** Material 3, açıq, qaranlıq və sistem rejimi (seçim yadda qalır), qradiyent və parıltılı 3D ikonlar, yumru künclü kartlar, böyük düymələr, interfeys tam Azərbaycan dilindədir.
@@ -37,11 +49,11 @@ Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android
 
 ```
 app/src/main/java/az/siqaret/anbar/
-├── data/            Room: Product, HistoryEntry, DAO-lar, AppDatabase, InventoryRepository
+├── data/            Room: Product, Firm, HistoryEntry, DAO-lar, AppDatabase (+ v1→v2 miqrasiya), InventoryRepository
 ├── util/            InventoryCalc (hesablama qaydaları), Fmt, Report, PdfExporter, XlsxExporter
 ├── ui/theme/        Rənglər (light/dark), tipoqrafiya, qradiyentlər
 ├── ui/components/   Icon3D, StatCard, GradientCard, ThemeMenuButton ...
-├── ui/screens/      HomeScreen, ProductEditScreen, HistoryScreen, ReportScreen
+├── ui/screens/      HomeScreen, FirmsScreen (+ firma səhifəsi), ProductEditScreen, HistoryScreen, ReportScreen
 ├── InventoryViewModel.kt
 └── MainActivity.kt  Naviqasiya + alt menyu
 ```
@@ -61,4 +73,6 @@ Release APK hazırda **debug açarı** ilə imzalanır ki, birbaşa quraşdırı
 ## Testlər
 
 - `CalcAndExportTest`: hesablama düsturları, ədəd daxiletməsi və formatlama, gündəlik xülasə, .xlsx faylının düzgünlüyü.
-- `AppFlowTest` (Robolectric): real `MainActivity` + Room bazası işə salınır. Test iki məhsul əlavə edir, canlı hesablamanı yoxlayır, +1 blok düyməsinə basır, təkrar ad xətasını, axtarışı, tarixçəni, hesabatı və qaranlıq rejimi yoxlayır.
+- `MigrationTest`: 1.0.0 versiyasının bazası yeni versiyaya keçəndə məhsulların və tarixçənin itmədiyini yoxlayır.
+- `AppFlowTest.firmFlow`: firma yaradır, firmaya siqaret əlavə edir (firma avtomatik seçilir), firmanın səhifəsindən +1 blok edir, firmalar siyahısını və ana səhifədəki firma filtrini yoxlayır.
+- `AppFlowTest.fullFlow` (Robolectric): real `MainActivity` + Room bazası işə salınır. Test iki məhsul əlavə edir, canlı hesablamanı yoxlayır, +1 blok düyməsinə basır, təkrar ad xətasını, axtarışı, tarixçəni, hesabatı və qaranlıq rejimi yoxlayır.

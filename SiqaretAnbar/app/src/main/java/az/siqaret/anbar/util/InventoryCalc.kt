@@ -9,7 +9,7 @@ object InventoryCalc {
 
     fun round2(v: Double): Double = BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).toDouble()
 
-    /** Blok sayı × 10 = ümumi qutu sayı */
+    /** Blok sayı × 10 = ümumi paçka sayı */
     fun totalBoxes(blocks: Int): Long = blocks.toLong() * BOXES_PER_BLOCK
 
     /** Blok sayı × bir blokun qiyməti = ümumi məbləğ */

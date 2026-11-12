@@ -18,8 +18,15 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE id = :id")
     suspend fun getById(id: Long): Product?
 
-    @Query("SELECT COUNT(*) FROM products WHERE name = :name COLLATE NOCASE AND id != :excludeId")
-    suspend fun countByName(name: String, excludeId: Long): Int
+    /** Eyni firmada eyni adlı məhsul olmasın (fərqli firmalardan eyni marka ola bilər). */
+    @Query(
+        "SELECT COUNT(*) FROM products WHERE name = :name COLLATE NOCASE AND id != :excludeId " +
+            "AND IFNULL(firmId, -1) = IFNULL(:firmId, -1)"
+    )
+    suspend fun countByName(name: String, firmId: Long?, excludeId: Long): Int
+
+    @Query("UPDATE products SET firmId = NULL WHERE firmId = :firmId")
+    suspend fun detachFirm(firmId: Long)
 
     @Insert
     suspend fun insert(product: Product): Long
@@ -44,4 +51,28 @@ interface HistoryDao {
 
     @Query("DELETE FROM history")
     suspend fun clear()
+}
+
+@Dao
+interface FirmDao {
+    @Query("SELECT * FROM firms ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<Firm>>
+
+    @Query("SELECT * FROM firms ORDER BY name COLLATE NOCASE")
+    suspend fun getAll(): List<Firm>
+
+    @Query("SELECT * FROM firms WHERE id = :id")
+    suspend fun getById(id: Long): Firm?
+
+    @Query("SELECT COUNT(*) FROM firms WHERE name = :name COLLATE NOCASE AND id != :excludeId")
+    suspend fun countByName(name: String, excludeId: Long): Int
+
+    @Insert
+    suspend fun insert(firm: Firm): Long
+
+    @Update
+    suspend fun update(firm: Firm)
+
+    @Delete
+    suspend fun delete(firm: Firm)
 }

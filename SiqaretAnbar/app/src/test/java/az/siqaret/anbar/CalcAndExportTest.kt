@@ -67,6 +67,23 @@ class CalcAndExportTest {
         assertEquals("1 234.50 ₼", Fmt.money(1234.5))
     }
 
+    @Test fun firmSummaryGroupsProducts() {
+        val f1 = az.siqaret.anbar.data.Firm(1, "A firma")
+        val f2 = az.siqaret.anbar.data.Firm(2, "B firma")
+        val list = listOf(
+            product(1, "X", 30.0, 2).copy(firmId = 1),
+            product(2, "Y", 20.0, 5).copy(firmId = 1),
+            product(3, "Z", 10.0, 1),
+        )
+        val g = az.siqaret.anbar.util.FirmSummary.group(list, listOf(f1, f2))
+        assertEquals(listOf("A firma", "B firma", "Firmasız"), g.map { it.name })
+        assertEquals(7L, g[0].stats.totalBlocks)
+        assertEquals(70L, g[0].stats.totalBoxes)
+        assertEquals(160.0, g[0].stats.totalValue, 0.0)
+        assertEquals(0, g[1].stats.productCount)
+        assertEquals(10.0, g[2].stats.totalValue, 0.0)
+    }
+
     @Test fun daySummaryCountsInAndOut() {
         val now = System.currentTimeMillis()
         val e = listOf(
@@ -82,7 +99,11 @@ class CalcAndExportTest {
     @Test fun xlsxIsValidZipWithWellFormedXml() {
         val now = System.currentTimeMillis()
         val data = ReportData(
-            products = listOf(product(1, "Marlboro <Red> & \"Gold\"", 34.0, 12), product(2, "Kent Nanotek", 30.0, 3)),
+            products = listOf(
+                product(1, "Marlboro <Red> & \"Gold\"", 34.0, 12).copy(firmId = 7),
+                product(2, "Kent Nanotek", 30.0, 3),
+            ),
+            firms = listOf(az.siqaret.anbar.data.Firm(7, "Azərsun MMC", "+994 50 000 00 00")),
             history = listOf(HistoryEntry(1, 1, "Marlboro", HistoryType.ADDED, 12, 12, 34.0, "qeyd", now)),
             period = Period.ALL,
             generatedAt = now,
@@ -100,12 +121,14 @@ class CalcAndExportTest {
                 dbf.newDocumentBuilder().parse(ByteArrayInputStream(content)) // xətalı XML olarsa exception
                 if (entry.name == "xl/worksheets/sheet1.xml") {
                     val xml = String(content, Charsets.UTF_8)
-                    assertTrue(xml.contains("ROUND(E5*D5,2)"))
-                    assertTrue(xml.contains("SUM(G5:G6)"))
+                    assertTrue(xml.contains("ROUND(F5*E5,2)"))
+                    assertTrue(xml.contains("Azərsun MMC"))
+                    assertTrue(xml.contains("SUM(H5:H6)"))
                     assertTrue(xml.contains("&lt;Red&gt; &amp;"))
                 }
             }
         }
+        assertTrue(names.contains("xl/worksheets/sheet4.xml"))
         assertTrue(names.containsAll(listOf("[Content_Types].xml", "xl/workbook.xml", "xl/styles.xml", "xl/worksheets/sheet1.xml")))
         assertEquals("A", XlsxExporter.col(0))
         assertEquals("Z", XlsxExporter.col(25))

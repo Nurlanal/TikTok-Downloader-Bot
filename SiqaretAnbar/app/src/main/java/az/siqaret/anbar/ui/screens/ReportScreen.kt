@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Card
@@ -64,6 +66,7 @@ fun ReportScreen(vm: InventoryViewModel) {
     val history by vm.history.collectAsStateWithLifecycle()
     val period by vm.reportPeriod.collectAsStateWithLifecycle()
     val theme by vm.themeMode.collectAsStateWithLifecycle()
+    val firmSummaries by vm.firmSummaries.collectAsStateWithLifecycle()
 
     val from = period.from()
     val days = remember(history, period) { DaySummary.group(history.filter { it.timestamp >= from }) }
@@ -103,7 +106,7 @@ fun ReportScreen(vm: InventoryViewModel) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MiniStat("Məhsul", Fmt.count(stats.productCount))
                             MiniStat("Blok", Fmt.count(stats.totalBlocks))
-                            MiniStat("Qutu", Fmt.count(stats.totalBoxes))
+                            MiniStat("Paçka", Fmt.count(stats.totalBoxes))
                         }
                     }
                 }
@@ -149,6 +152,33 @@ fun ReportScreen(vm: InventoryViewModel) {
                             Cell(Fmt.count(stats.totalBlocks), 1f, bold = true, end = true)
                             Cell("", 1.3f)
                             Cell(Fmt.money(stats.totalValue), 1.7f, bold = true, end = true)
+                        }
+                    }
+                }
+            }
+
+            if (firmSummaries.any { it.firm != null }) {
+                item { SectionTitle("Firmalar üzrə") }
+                items(firmSummaries, key = { "f${it.firm?.id ?: -1}" }) { f ->
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    ) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon3D(
+                                Icons.Filled.Business,
+                                if (f.firm == null) Gradients.Slate else Gradients.forName(f.name), size = 40.dp,
+                            )
+                            androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(f.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    "${f.stats.productCount} növ · ${Fmt.count(f.stats.totalBlocks)} blok · ${Fmt.count(f.stats.totalBoxes)} paçka",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(Fmt.money(f.stats.totalValue), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

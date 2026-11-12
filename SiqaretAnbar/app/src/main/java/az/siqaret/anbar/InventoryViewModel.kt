@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import az.siqaret.anbar.data.Firm
 import az.siqaret.anbar.data.HistoryEntry
 import az.siqaret.anbar.data.InventoryRepository
 import az.siqaret.anbar.data.Product
 import az.siqaret.anbar.data.totalAmount
+import az.siqaret.anbar.util.FirmSummary
 import az.siqaret.anbar.util.Fmt
 import az.siqaret.anbar.util.InventoryStats
 import az.siqaret.anbar.util.PdfExporter
@@ -56,6 +58,8 @@ class InventoryViewModel(
 
     val query = MutableStateFlow("")
     val sort = MutableStateFlow(SortOption.NAME_ASC)
+    /** Ana səhifə firma filtri: null = hamısı, [NO_FIRM_FILTER] = firmasız, digər = firma id. */
+    val firmFilter = MutableStateFlow<Long?>(null)
     val reportPeriod = MutableStateFlow(Period.WEEK)
     val historyPeriod = MutableStateFlow(Period.ALL)
 
@@ -63,6 +67,13 @@ class InventoryViewModel(
 
     val products: StateFlow<List<Product>> =
         repo.products.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val firms: StateFlow<List<Firm>> =
+        repo.firms.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val firmSummaries: StateFlow<List<FirmSummary>> =
+        combine(products, firms) { p, f -> FirmSummary.group(p, f) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val history: StateFlow<List<HistoryEntry>> =
         repo.history.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -72,8 +83,14 @@ class InventoryViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, InventoryStats())
 
     val visibleProducts: StateFlow<List<Product>> =
-        combine(products, query, sort) { list, q, s ->
-            val filtered = if (q.isBlank()) list else list.filter { it.name.contains(q.trim(), ignoreCase = true) }
+        combine(products, query, sort, firmFilter, firms) { list, q, s, ff, fl ->
+            val ids = fl.map { it.id }.toSet()
+            val byFirm = when (ff) {
+                null -> list
+                NO_FIRM_FILTER -> list.filter { it.firmId == null || it.firmId !in ids }
+                else -> list.filter { it.firmId == ff }
+            }
+            val filtered = if (q.isBlank()) byFirm else byFirm.filter { it.name.contains(q.trim(), ignoreCase = true) }
             when (s) {
                 SortOption.NAME_ASC -> filtered.sortedWith { a, b -> collator.compare(a.name, b.name) }
                 SortOption.NAME_DESC -> filtered.sortedWith { a, b -> collator.compare(b.name, a.name) }
@@ -90,10 +107,42 @@ class InventoryViewModel(
     private fun say(text: String) { _messages.trySend(UiMessage(text)) }
 
     suspend fun getProduct(id: Long): Product? = repo.getProduct(id)
+    suspend fun getFirm(id: Long): Firm? = repo.getFirm(id)
+
+    /** Firma yarat / redaktə et. onResult(xəta, firmaId) */
+    fun saveFirm(id: Long?, name: String, phone: String, note: String, onResult: (String?, Long?) -> Unit) {
+        viewModelScope.launch {
+            val n = name.trim().replace(Regex("\\s+"), " ")
+            val error = when {
+                n.isEmpty() -> "Firmanın adını daxil edin"
+                n.length > 60 -> "Ad çox uzundur (maks. 60 simvol)"
+                repo.firmNameExists(n, id ?: 0L) -> "\"$n\" adlı firma artıq mövcuddur"
+                else -> null
+            }
+            if (error != null) { onResult(error, null); return@launch }
+            val newId = if (id == null) {
+                repo.addFirm(n, phone.trim(), note.trim()).also { say("\"$n\" firması əlavə edildi") }
+            } else {
+                val old = repo.getFirm(id) ?: run { onResult("Firma tapılmadı", null); return@launch }
+                repo.updateFirm(old.copy(name = n, phone = phone.trim(), note = note.trim()))
+                say("Firma yeniləndi")
+                id
+            }
+            onResult(null, newId)
+        }
+    }
+
+    fun deleteFirm(f: Firm) {
+        viewModelScope.launch {
+            repo.deleteFirm(f)
+            if (firmFilter.value == f.id) firmFilter.value = null
+            say("\"${f.name}\" firması silindi. Onun siqaretləri \"${FirmSummary.NO_FIRM}\" bölməsinə keçdi")
+        }
+    }
 
     /** Doğrulama + yadda saxlama. Xəta olarsa mətn qaytarılır, uğurlu olarsa null. */
     fun saveProduct(
-        id: Long?, name: String, boxPrice: Double?, blockPrice: Double?, blocks: Int?,
+        id: Long?, name: String, boxPrice: Double?, blockPrice: Double?, blocks: Int?, firmId: Long?,
         onResult: (String?) -> Unit,
     ) {
         viewModelScope.launch {
@@ -103,16 +152,18 @@ class InventoryViewModel(
                 n.length > 60 -> "Ad çox uzundur (maks. 60 simvol)"
                 blockPrice == null || blockPrice <= 0.0 -> "Bir blokun qiymətini daxil edin"
                 blocks == null -> "Blok sayını daxil edin"
-                repo.nameExists(n, id ?: 0L) -> "\"$n\" adlı məhsul artıq mövcuddur"
+                repo.nameExists(n, firmId, id ?: 0L) ->
+                    if (firmId == null) "\"$n\" adlı məhsul artıq mövcuddur"
+                    else "Bu firmada \"$n\" adlı məhsul artıq mövcuddur"
                 else -> null
             }
             if (error != null) { onResult(error); return@launch }
             val box = boxPrice ?: 0.0
             if (id == null) {
-                repo.addProduct(n, box, blockPrice!!, blocks!!)
+                repo.addProduct(n, box, blockPrice!!, blocks!!, firmId)
                 say("\"$n\" əlavə edildi")
             } else {
-                repo.updateProduct(id, n, box, blockPrice!!, blocks!!)
+                repo.updateProduct(id, n, box, blockPrice!!, blocks!!, firmId)
                 say("Dəyişikliklər yadda saxlanıldı")
             }
             onResult(null)
@@ -149,6 +200,7 @@ class InventoryViewModel(
             history = repo.historySince(period.from(now)),
             period = period,
             generatedAt = now,
+            firms = repo.allFirms(),
         )
     }
 
@@ -180,6 +232,8 @@ class InventoryViewModel(
         "Siqaret_hesabat_${Fmt.fileStamp(System.currentTimeMillis())}.${if (pdf) "pdf" else "xlsx"}"
 
     companion object {
+        const val NO_FIRM_FILTER = -1L
+
         fun factory(app: SiqaretApp) = viewModelFactory {
             initializer { InventoryViewModel(app, app.repository, app.settings) }
         }
