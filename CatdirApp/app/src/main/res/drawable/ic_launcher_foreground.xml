@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Çatdırılma çantası + sürət xətləri -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#33000000" android:pathData="M42,77 L76,77 L76,79 L42,79 Z" />
+    <!-- sürət xətləri -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M26,50 L37,50 Q38.5,50 38.5,51.5 Q38.5,53 37,53 L26,53 Q24.5,53 24.5,51.5 Q24.5,50 26,50 Z" />
+    <path android:fillColor="#CCFFFFFF" android:pathData="M29,58 L37,58 Q38.5,58 38.5,59.5 Q38.5,61 37,61 L29,61 Q27.5,61 27.5,59.5 Q27.5,58 29,58 Z" />
+    <path android:fillColor="#99FFFFFF" android:pathData="M32,66 L37,66 Q38.5,66 38.5,67.5 Q38.5,69 37,69 L32,69 Q30.5,69 30.5,67.5 Q30.5,66 32,66 Z" />
+    <!-- çanta -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M44,40 L76,40 Q80,40 80,44 L80,72 Q80,76 76,76 L44,76 Q40,76 40,72 L40,44 Q40,40 44,40 Z" />
+    <path android:fillColor="#FFFED7AA" android:pathData="M40,48 L80,48 L80,52 L40,52 Z" />
+    <!-- qulp -->
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.5"
+        android:pathData="M52,40 L52,35 Q52,31 56,31 L64,31 Q68,31 68,35 L68,40" />
+    <!-- ox -->
+    <path android:fillColor="#FFEA580C" android:pathData="M52,62 L64,62 L64,57.5 L71,64 L64,70.5 L64,66 L52,66 Z" />
+</vector>

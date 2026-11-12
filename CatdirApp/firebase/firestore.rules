@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// Çatdır — Firestore təhlükəsizlik qaydaları.
+// Telefona etibar edilmir: kimin nə edə biləcəyi burada, serverdə yoxlanılır.
+// Proqramdakı OrderRules.kt ilə eyni məntiqdir.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function role() { return signedIn() && exists(userPath()) ? get(userPath()).data.role : 'NONE'; }
+    function isAdmin() { return role() == 'ADMIN'; }
+    function isCourier() { return role() == 'COURIER'; }
+    function storeData(id) { return get(/databases/$(database)/documents/stores/$(id)).data; }
+
+    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function onlyChanged(keys) { return changedKeys().hasOnly(keys); }
+    function oldStatus() { return resource.data.status; }
+    function newStatus() { return request.resource.data.status; }
+    // timeline xəritəsinə yalnız yeni statusun vaxtı əlavə olunmalıdır
+    function statusStamped() {
+      return request.resource.data.timeline.diff(resource.data.timeline).affectedKeys().hasOnly([newStatus()]);
+    }
+
+    // ---------------- İstifadəçilər ----------------
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      // Qeydiyyatda hər kəs yalnız MÜŞTƏRİ kimi yarana bilər
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'CUSTOMER'
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'role', 'address', 'online', 'createdAt']);
+      allow update: if signedIn() && (
+        // öz profilini dəyişə bilər, amma rolunu yox; "online" yalnız kuryer üçün
+        (request.auth.uid == uid && onlyChanged(['name', 'phone', 'address', 'online'])
+          && (!('online' in changedKeys()) || resource.data.role == 'COURIER'))
+        // admin başqasının rolunu dəyişə bilər
+        || (isAdmin() && uid != request.auth.uid && onlyChanged(['role'])
+          && request.resource.data.role in ['CUSTOMER', 'COURIER', 'ADMIN'])
+      );
+      allow delete: if false;
+    }
+
+    // ---------------- Mağazalar və məhsullar ----------------
+    match /stores/{storeId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+      match /products/{productId} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+      }
+    }
+
+    // ---------------- Sifarişlər ----------------
+    match /orders/{orderId} {
+      allow read: if signedIn() && (
+        resource.data.customerId == request.auth.uid
+        || isAdmin()
+        || (isCourier() && (
+              resource.data.courierId == request.auth.uid
+              || (resource.data.courierId == null && resource.data.status in ['ACCEPTED', 'READY'])))
+      );
+
+      allow create: if signedIn()
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.status == 'NEW'
+        && request.resource.data.courierId == null
+        && request.resource.data.payment == 'cash'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 100
+        && request.resource.data.subtotalQ is int && request.resource.data.subtotalQ > 0
+        && storeData(request.resource.data.storeId).isOpen == true
+        && request.resource.data.deliveryFeeQ == storeData(request.resource.data.storeId).deliveryFeeQ
+        && request.resource.data.totalQ == request.resource.data.subtotalQ + request.resource.data.deliveryFeeQ
+        && request.resource.data.address is string && request.resource.data.address.size() >= 5
+        && request.resource.data.timeline.keys().hasOnly(['NEW']);
+
+      allow update: if signedIn() && (
+        // müştəri: yalnız "Yeni" vəziyyətdə ləğv
+        (resource.data.customerId == request.auth.uid && oldStatus() == 'NEW' && newStatus() == 'CANCELLED'
+          && onlyChanged(['status', 'updatedAt', 'timeline', 'cancelReason']) && statusStamped())
+        // admin: qəbul et → hazırdır, və ya kuryer götürməmiş ləğv et
+        || (isAdmin() && onlyChanged(['status', 'updatedAt', 'timeline', 'cancelReason']) && statusStamped() && (
+              (oldStatus() == 'NEW' && newStatus() == 'ACCEPTED')
+              || (oldStatus() == 'ACCEPTED' && newStatus() == 'READY')
+              || (oldStatus() in ['NEW', 'ACCEPTED', 'READY'] && newStatus() == 'CANCELLED')))
+        // kuryer: heç kimin götürmədiyi sifarişi özünə götürür
+        || (isCourier() && resource.data.courierId == null && oldStatus() in ['ACCEPTED', 'READY']
+          && request.resource.data.courierId == request.auth.uid
+          && onlyChanged(['courierId', 'courierName', 'courierPhone', 'updatedAt']))
+        // kuryer: öz sifarişini mağazadan götürür / çatdırır
+        || (isCourier() && resource.data.courierId == request.auth.uid
+          && onlyChanged(['status', 'updatedAt', 'timeline']) && statusStamped() && (
+              (oldStatus() == 'READY' && newStatus() == 'PICKED_UP')
+              || (oldStatus() == 'PICKED_UP' && newStatus() == 'DELIVERED')))
+      );
+      allow delete: if false;
+    }
+  }
+}
