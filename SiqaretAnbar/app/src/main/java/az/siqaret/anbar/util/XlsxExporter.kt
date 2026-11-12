@@ -49,6 +49,7 @@ object XlsxExporter {
             put("xl/worksheets/sheet2.xml", historySheet(data))
             put("xl/worksheets/sheet3.xml", dailySheet(data))
             put("xl/worksheets/sheet4.xml", firmsSheet(data))
+            put("xl/worksheets/sheet5.xml", invoicesSheet(data))
         }
     }
 
@@ -93,6 +94,39 @@ object XlsxExporter {
         rows += listOf(Empty, Str("Ümumi paçka sayı", S_TOTAL_LABEL), Num(s.totalBoxes.toDouble(), S_TOTAL_INT))
         rows += listOf(Empty, Str("Ümumi stok dəyəri", S_TOTAL_LABEL), Num(s.totalValue, S_TOTAL_MONEY))
         return sheet(rows, listOf(6.0, 30.0, 22.0, 14.0, 14.0, 12.0, 12.0, 18.0), freezeRow = 4)
+    }
+
+    /** Seçilmiş dövrün qaimələri: hər sətir ayrıca, sonda cəm. */
+    private fun invoicesSheet(data: ReportData): String {
+        val rows = mutableListOf<List<Cell>>()
+        rows += listOf(Str("Qaimələr — ${data.period.label}", S_TITLE))
+        rows.add(emptyList())
+        rows += listOf(
+            "Tarix", "Qaimə", "Firma", "Siqaret", "Paçka qiyməti", "Blok qiyməti", "Blok sayı", "Paçka sayı", "Məbləğ",
+        ).map { Str(it, S_HEADER) }
+        val first = rows.size + 1
+        data.invoices.forEach { inv ->
+            inv.items.forEach { it ->
+                val r = rows.size + 1
+                rows += listOf(
+                    Str(Fmt.date(inv.invoice.date)), Str(inv.title), Str(inv.firmName), Str(it.productName),
+                    Num(it.boxPrice, S_PRICE3), Num(it.blockPrice), Num(it.blockCount.toDouble(), S_INT),
+                    Formula("G$r*${InventoryCalc.BOXES_PER_BLOCK}", (it.blockCount.toLong() * InventoryCalc.BOXES_PER_BLOCK).toDouble(), S_INT),
+                    Formula("ROUND(G$r*F$r,2)", InventoryCalc.totalAmount(it.blockCount, it.blockPrice), S_MONEY),
+                )
+            }
+        }
+        val last = rows.size
+        if (last >= first) {
+            rows += listOf(
+                Str("CƏMİ", S_TOTAL_LABEL), Str("${data.invoices.size} qaimə", S_TOTAL_LABEL),
+                Str("", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL), Str("", S_TOTAL_LABEL),
+                Formula("SUM(G$first:G$last)", data.invoices.sumOf { it.totalBlocks }.toDouble(), S_TOTAL_INT),
+                Formula("SUM(H$first:H$last)", data.invoices.sumOf { it.totalBoxes }.toDouble(), S_TOTAL_INT),
+                Formula("SUM(I$first:I$last)", InventoryCalc.sum(data.invoices.map { it.totalAmount }), S_TOTAL_MONEY),
+            )
+        }
+        return sheet(rows, listOf(12.0, 16.0, 22.0, 26.0, 14.0, 14.0, 11.0, 11.0, 16.0), freezeRow = 3)
     }
 
     /** Firmalar üzrə xülasə: hər firmadan alınan siqaretlər. Rəqəmlər "Məhsullar" vərəqindən SUMIF ilə hesablanır. */
@@ -231,6 +265,7 @@ object XlsxExporter {
 <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet5.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
 </Types>"""
@@ -249,6 +284,7 @@ object XlsxExporter {
 <sheets>
 <sheet name="Məhsullar" sheetId="1" r:id="rId1"/>
 <sheet name="Firmalar" sheetId="4" r:id="rId5"/>
+<sheet name="Qaimələr" sheetId="5" r:id="rId6"/>
 <sheet name="Tarixçə" sheetId="2" r:id="rId2"/>
 <sheet name="Gündəlik" sheetId="3" r:id="rId3"/>
 </sheets>
@@ -262,6 +298,7 @@ object XlsxExporter {
 <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
 <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/>
+<Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet5.xml"/>
 </Relationships>"""
 
     private fun styles() = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

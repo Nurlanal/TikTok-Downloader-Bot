@@ -2,17 +2,30 @@
 
 Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android tətbiqi.
 
-**Hazır APK:** [`apk/SiqaretAnbar-1.1.1.apk`](apk/SiqaretAnbar-1.1.1.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin). Köhnə versiya quraşdırılıbsa, üstündən yazın: məlumatlar saxlanılır.
+**Hazır APK:** [`apk/SiqaretAnbar-1.2.0.apk`](apk/SiqaretAnbar-1.2.0.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin). Köhnə versiya quraşdırılıbsa, üstündən yazın: məlumatlar saxlanılır.
 
 | Ana səhifə | Firmalar | Firmanın siqaretləri | Firmaya siqaret əlavə et |
 |---|---|---|---|
 | ![](docs/screenshots/04_home.png) | ![](docs/screenshots/12_firms.png) | ![](docs/screenshots/11_firm_detail.png) | ![](docs/screenshots/10_add_to_firm.png) |
+
+| Yeni qaimə (sətirlər alt-alta) | Firmanın qaimələri | Qaiməyə baxış |
+|---|---|---|
+| ![](docs/screenshots/30_invoice_form.png) | ![](docs/screenshots/32_firm_invoices.png) | ![](docs/screenshots/33_invoice_detail.png) |
 
 | Canlı hesablama | Tarixçə | Hesabat | Qaranlıq rejim |
 |---|---|---|---|
 | ![](docs/screenshots/02_add_product_live_calc.png) | ![](docs/screenshots/05_history.png) | ![](docs/screenshots/06_report.png) | ![](docs/screenshots/08_home_dark.png) |
 
 ## İmkanlar
+
+**Qaimələr (1.2.0):**
+- Firmanı açın → **"Qaimə əlavə et"**. Qaimə nömrəsi, tarix (təqvimdən seçilir) və qeyd yazılır.
+- Siqaretlər **alt-alta sətir-sətir** yazılır: ad, paçka/blok qiyməti, blok sayı. "Yeni sətir əlavə et" düyməsi növbəti sətri açır. Hər sətrin məbləği, aşağıda isə qaimənin cəmi (sətir, blok, paçka, məbləğ) canlı hesablanır.
+- Ad yazanda firmanın mövcud siqaretləri təklif olunur. Seçəndə qiymətlər özü dolur.
+- Yadda saxlayanda firmada yoxdursa, siqaret yeni məhsul kimi yaradılır. Varsa, bloklar mövcud stoka əlavə olunur və qiymət qaimədəki qiymətə yenilənir. Sətirdə "Stokda var: 10 blok → +2" kimi göstərilir.
+- Firmanın səhifəsində iki bölmə var: **Siqaretlər** və **Qaimələr** (ümumi alış məbləği ilə). Qaiməyə basanda bütün sətirləri və cəmi görünür.
+- Qaimə silinəndə onunla gələn bloklar stokdan çıxılır. Bloklar artıq satılıbsa, silinmə dayandırılır.
+- Hesabat: PDF-də seçilmiş dövrün qaimələri, Excel-də "Qaimələr" vərəqi (formullarla).
 
 **Firmalar (1.1.0):**
 - Siqaret alınan firmaları əlavə edin: ad, telefon (istəyə görə), qeyd. Firmanı redaktə etmək və silmək olar.
@@ -75,6 +88,8 @@ Release APK hazırda **debug açarı** ilə imzalanır ki, birbaşa quraşdırı
 ## Testlər
 
 - `CalcAndExportTest`: hesablama düsturları, ədəd daxiletməsi və formatlama, gündəlik xülasə, .xlsx faylının düzgünlüyü.
+- `InvoiceRepositoryTest`: qaimə yeni siqaret yaradır və mövcud stoku artırır (başqa firmanın eyni adlı siqaretinə toxunmur). Silinəndə stok geri çıxılır, satılmış stok varsa silinmə dayandırılır.
+- `AppFlowTest.invoiceFlow`: firma → qaimə → 2 sətir (419.70 + 160.00 = 579.70 ₼) → yadda saxla → ikinci qaimə ilə mövcud siqaretin stoku artır → qaiməyə baxış.
 - `MigrationTest`: 1.0.0 versiyasının bazası yeni versiyaya keçəndə məhsulların və tarixçənin itmədiyini yoxlayır.
 - `AppFlowTest.firmFlow`: firma yaradır, firmaya siqaret əlavə edir (firma avtomatik seçilir), firmanın səhifəsindən +1 blok edir, firmalar siyahısını və ana səhifədəki firma filtrini yoxlayır.
 - `AppFlowTest.fullFlow` (Robolectric): real `MainActivity` + Room bazası işə salınır. Test iki məhsul əlavə edir, canlı hesablamanı yoxlayır, +1 blok düyməsinə basır, təkrar ad xətasını, axtarışı, tarixçəni, hesabatı və qaranlıq rejimi yoxlayır.

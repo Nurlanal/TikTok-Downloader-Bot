@@ -58,3 +58,31 @@ data class HistoryEntry(
     val note: String,
     val timestamp: Long,
 )
+
+/** Firmadan alınan malın qaiməsi (faktura). */
+@Entity(tableName = "invoices", indices = [Index("firmId"), Index("date")])
+data class Invoice(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val firmId: Long,
+    val number: String,
+    val date: Long,
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
+val Invoice.title: String get() = if (number.isBlank()) "Qaimə #$id" else "Qaimə № $number"
+
+/** Qaimənin bir sətri: hansı siqaretdən neçə blok, hansı qiymətə alınıb. */
+@Entity(tableName = "invoice_items", indices = [Index("invoiceId")])
+data class InvoiceItem(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val invoiceId: Long,
+    val productId: Long,
+    val productName: String,
+    val boxPrice: Double,
+    val blockPrice: Double,
+    val blockCount: Int,
+)
+
+val InvoiceItem.totalBoxes: Long get() = InventoryCalc.totalBoxes(blockCount)
+val InvoiceItem.totalAmount: Double get() = InventoryCalc.totalAmount(blockCount, blockPrice)

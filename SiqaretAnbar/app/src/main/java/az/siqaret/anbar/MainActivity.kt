@@ -51,6 +51,8 @@ import az.siqaret.anbar.ui.components.LocalSnackbarHost
 import az.siqaret.anbar.ui.screens.FirmDetailScreen
 import az.siqaret.anbar.ui.screens.FirmsScreen
 import az.siqaret.anbar.ui.screens.HistoryScreen
+import az.siqaret.anbar.ui.screens.InvoiceDetailScreen
+import az.siqaret.anbar.ui.screens.InvoiceEditScreen
 import az.siqaret.anbar.ui.screens.HomeScreen
 import az.siqaret.anbar.ui.screens.ProductEditScreen
 import az.siqaret.anbar.ui.screens.ReportScreen
@@ -169,7 +171,26 @@ fun AppRoot(vm: InventoryViewModel) {
                     onBack = { nav.popBackStack() },
                     onAddProduct = { f -> nav.navigate(if (f != null) "edit?firmId=$f" else "edit") },
                     onEditProduct = { id -> nav.navigate("edit?id=$id") },
+                    onAddInvoice = { f -> nav.navigate("invoice/new/$f") },
+                    onOpenInvoice = { id -> nav.navigate("invoice/$id") },
                 )
+            }
+            composable(
+                "invoice/new/{firmId}",
+                arguments = listOf(navArgument("firmId") { type = NavType.LongType }),
+            ) { back ->
+                InvoiceEditScreen(
+                    vm,
+                    firmId = back.arguments?.getLong("firmId") ?: 0L,
+                    onBack = { nav.popBackStack() },
+                    onSaved = { nav.popBackStack() },
+                )
+            }
+            composable(
+                "invoice/{invoiceId}",
+                arguments = listOf(navArgument("invoiceId") { type = NavType.LongType }),
+            ) { back ->
+                InvoiceDetailScreen(vm, back.arguments?.getLong("invoiceId") ?: 0L, onBack = { nav.popBackStack() })
             }
             composable("history") { HistoryScreen(vm) }
             composable("report") { ReportScreen(vm) }

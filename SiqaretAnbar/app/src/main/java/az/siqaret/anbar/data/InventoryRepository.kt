@@ -8,6 +8,10 @@ class InventoryRepository(private val db: AppDatabase) {
     private val productDao = db.productDao()
     private val historyDao = db.historyDao()
     private val firmDao = db.firmDao()
+    private val invoiceDao = db.invoiceDao()
+
+    val invoices: Flow<List<Invoice>> = invoiceDao.observeAll()
+    val invoiceItems: Flow<List<InvoiceItem>> = invoiceDao.observeAllItems()
 
     val products: Flow<List<Product>> = productDao.observeAll()
     val firms: Flow<List<Firm>> = firmDao.observeAll()
@@ -35,6 +39,8 @@ class InventoryRepository(private val db: AppDatabase) {
 
     /** Firma silinir, onun məhsulları isə "firmasız" qalır (stok itmir). */
     suspend fun deleteFirm(firm: Firm) = db.withTransaction {
+        invoiceDao.deleteItemsForFirm(firm.id)
+        invoiceDao.deleteForFirm(firm.id)
         productDao.detachFirm(firm.id)
         firmDao.delete(firm)
     }
@@ -134,5 +140,106 @@ class InventoryRepository(private val db: AppDatabase) {
             )
         )
         newCount.toInt()
+    }
+
+    // ---------------- Qaimələr ----------------
+
+    data class InvoiceLine(val name: String, val boxPrice: Double, val blockPrice: Double, val blocks: Int)
+
+    suspend fun getInvoice(id: Long): Pair<Invoice, List<InvoiceItem>>? =
+        invoiceDao.getById(id)?.let { it to invoiceDao.itemsOf(id) }
+
+    suspend fun invoicesSince(from: Long): Pair<List<Invoice>, List<InvoiceItem>> =
+        invoiceDao.getSince(from) to invoiceDao.itemsSince(from)
+
+    /**
+     * Qaiməni yadda saxlayır və stoku artırır: firmada həmin adlı siqaret varsa bloklar ona əlavə olunur
+     * (qiyməti qaimədəki qiymətə yenilənir), yoxdursa firmanın altında yeni siqaret yaradılır.
+     */
+    suspend fun saveInvoice(firmId: Long, number: String, date: Long, note: String, lines: List<InvoiceLine>): Long =
+        db.withTransaction {
+            val now = System.currentTimeMillis()
+            val firmName = firmLabel(firmId)
+            val invId = invoiceDao.insert(Invoice(firmId = firmId, number = number, date = date, note = note, createdAt = now))
+            val label = if (number.isBlank()) "Qaimə #$invId" else "Qaimə № $number"
+            val items = lines.map { l ->
+                val existing = productDao.findByName(l.name, firmId)
+                val productId: Long
+                val name: String
+                if (existing != null) {
+                    val newCount = (existing.blockCount.toLong() + l.blocks).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    productDao.update(
+                        existing.copy(
+                            blockCount = newCount, boxPrice = l.boxPrice, blockPrice = l.blockPrice, updatedAt = now,
+                        )
+                    )
+                    val priceNote = if (existing.blockPrice != l.blockPrice)
+                        " · Blok: ${Fmt.money(existing.blockPrice)} → ${Fmt.money(l.blockPrice)}" else ""
+                    historyDao.insert(
+                        HistoryEntry(
+                            productId = existing.id, productName = existing.name, type = HistoryType.STOCK_IN,
+                            blockDelta = l.blocks, blocksAfter = newCount, blockPrice = l.blockPrice,
+                            note = "$label · ${existing.blockCount} → $newCount blok$priceNote", timestamp = now,
+                        )
+                    )
+                    productId = existing.id
+                    name = existing.name
+                } else {
+                    productId = productDao.insert(
+                        Product(
+                            name = l.name, boxPrice = l.boxPrice, blockPrice = l.blockPrice, blockCount = l.blocks,
+                            createdAt = now, updatedAt = now, firmId = firmId,
+                        )
+                    )
+                    historyDao.insert(
+                        HistoryEntry(
+                            productId = productId, productName = l.name, type = HistoryType.ADDED,
+                            blockDelta = l.blocks, blocksAfter = l.blocks, blockPrice = l.blockPrice,
+                            note = listOfNotNull(label, firmName?.let { "Firma: $it" }).joinToString(" · "),
+                            timestamp = now,
+                        )
+                    )
+                    name = l.name
+                }
+                InvoiceItem(
+                    invoiceId = invId, productId = productId, productName = name,
+                    boxPrice = l.boxPrice, blockPrice = l.blockPrice, blockCount = l.blocks,
+                )
+            }
+            invoiceDao.insertItems(items)
+            invId
+        }
+
+    /**
+     * Qaiməni silir və onunla gələn blokları stokdan çıxır.
+     * @return xəta mətni (stok artıq satılıbsa), uğurlu olduqda null
+     */
+    suspend fun deleteInvoice(invoiceId: Long): String? = db.withTransaction {
+        val inv = invoiceDao.getById(invoiceId) ?: return@withTransaction null
+        val items = invoiceDao.itemsOf(invoiceId)
+        val perProduct = items.groupBy { it.productId }.mapValues { (_, l) -> l.sumOf { it.blockCount.toLong() } }
+        for ((pid, blocks) in perProduct) {
+            val p = productDao.getById(pid) ?: continue
+            if (p.blockCount < blocks) {
+                return@withTransaction "\"${p.name}\" stokunda ${p.blockCount} blok qalıb, qaimədə isə $blocks blok var. " +
+                    "Qaimə silinə bilməz."
+            }
+        }
+        val now = System.currentTimeMillis()
+        for ((pid, blocks) in perProduct) {
+            val p = productDao.getById(pid) ?: continue
+            val newCount = (p.blockCount - blocks).toInt()
+            productDao.update(p.copy(blockCount = newCount, updatedAt = now))
+            historyDao.insert(
+                HistoryEntry(
+                    productId = pid, productName = p.name, type = HistoryType.STOCK_OUT,
+                    blockDelta = -blocks.toInt(), blocksAfter = newCount, blockPrice = p.blockPrice,
+                    note = "${inv.title} silindi · ${p.blockCount} → $newCount blok", timestamp = now,
+                )
+            )
+        }
+        invoiceDao.deleteItems(invoiceId)
+        invoiceDao.delete(inv)
+        null
     }
 }

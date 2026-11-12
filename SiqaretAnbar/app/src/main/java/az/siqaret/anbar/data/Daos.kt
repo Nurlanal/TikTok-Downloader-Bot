@@ -25,6 +25,12 @@ interface ProductDao {
     )
     suspend fun countByName(name: String, firmId: Long?, excludeId: Long): Int
 
+    @Query(
+        "SELECT * FROM products WHERE name = :name COLLATE NOCASE " +
+            "AND IFNULL(firmId, -1) = IFNULL(:firmId, -1) LIMIT 1"
+    )
+    suspend fun findByName(name: String, firmId: Long?): Product?
+
     @Query("UPDATE products SET firmId = NULL WHERE firmId = :firmId")
     suspend fun detachFirm(firmId: Long)
 
@@ -75,4 +81,43 @@ interface FirmDao {
 
     @Delete
     suspend fun delete(firm: Firm)
+}
+
+@Dao
+interface InvoiceDao {
+    @Query("SELECT * FROM invoices ORDER BY date DESC, id DESC")
+    fun observeAll(): Flow<List<Invoice>>
+
+    @Query("SELECT * FROM invoice_items ORDER BY id")
+    fun observeAllItems(): Flow<List<InvoiceItem>>
+
+    @Query("SELECT * FROM invoices WHERE id = :id")
+    suspend fun getById(id: Long): Invoice?
+
+    @Query("SELECT * FROM invoice_items WHERE invoiceId = :invoiceId ORDER BY id")
+    suspend fun itemsOf(invoiceId: Long): List<InvoiceItem>
+
+    @Query("SELECT * FROM invoices WHERE date >= :from ORDER BY date DESC, id DESC")
+    suspend fun getSince(from: Long): List<Invoice>
+
+    @Query("SELECT * FROM invoice_items WHERE invoiceId IN (SELECT id FROM invoices WHERE date >= :from) ORDER BY id")
+    suspend fun itemsSince(from: Long): List<InvoiceItem>
+
+    @Insert
+    suspend fun insert(invoice: Invoice): Long
+
+    @Insert
+    suspend fun insertItems(items: List<InvoiceItem>)
+
+    @Delete
+    suspend fun delete(invoice: Invoice)
+
+    @Query("DELETE FROM invoice_items WHERE invoiceId = :invoiceId")
+    suspend fun deleteItems(invoiceId: Long)
+
+    @Query("DELETE FROM invoice_items WHERE invoiceId IN (SELECT id FROM invoices WHERE firmId = :firmId)")
+    suspend fun deleteItemsForFirm(firmId: Long)
+
+    @Query("DELETE FROM invoices WHERE firmId = :firmId")
+    suspend fun deleteForFirm(firmId: Long)
 }

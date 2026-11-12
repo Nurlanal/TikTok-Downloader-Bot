@@ -58,6 +58,7 @@ object PdfExporter {
             summary()
             productsTable()
             firmsTable()
+            invoicesSection()
             history()
             finishPage()
         }
@@ -211,6 +212,46 @@ object PdfExporter {
                 y += 18f
             }
             y += 22f
+        }
+
+        private fun invoicesSection() {
+            val list = data.invoices
+            if (list.isEmpty()) return
+            sectionTitle("Qaimələr (${data.period.label}) · cəmi ${Fmt.moneyAzn(InventoryCalc.sum(list.map { it.totalAmount }))}")
+            val cols = listOf(
+                Col("№", 22f), Col("Siqaret", 170f), Col("Paçka qiy.", 64f, true), Col("Blok qiy.", 64f, true),
+                Col("Blok", 50f, true), Col("Paçka", 55f, true), Col("Məbləğ", contentW - 425f, true),
+            )
+            list.forEach { inv ->
+                ensure(64f)
+                fill.color = tint
+                c.drawRoundRect(RectF(margin, y, margin + contentW, y + 22f), 6f, 6f, fill)
+                val hp = TextPaint(bold).apply { textSize = 10f }
+                c.drawText(ellipsize("${inv.title} · ${Fmt.date(inv.invoice.date)} · ${inv.firmName}", hp, contentW - 140f), margin + 8f, y + 15f, hp)
+                val total = Fmt.moneyAzn(inv.totalAmount)
+                c.drawText(total, margin + contentW - 8f - hp.measureText(total), y + 15f, hp)
+                y += 26f
+                tableHeader(cols)
+                inv.items.forEachIndexed { i, it ->
+                    ensure(20f) { tableHeader(cols) }
+                    if (i % 2 == 1) {
+                        fill.color = zebra
+                        c.drawRect(margin, y, margin + contentW, y + 18f, fill)
+                    }
+                    drawRow(
+                        cols,
+                        listOf(
+                            "${i + 1}", it.productName, Fmt.priceNumber(it.boxPrice), Fmt.number(it.blockPrice),
+                            Fmt.count(it.blockCount), Fmt.count(it.blockCount.toLong() * InventoryCalc.BOXES_PER_BLOCK),
+                            Fmt.number(InventoryCalc.totalAmount(it.blockCount, it.blockPrice)),
+                        ),
+                        y + 12.5f, text,
+                    )
+                    y += 18f
+                }
+                y += 12f
+            }
+            y += 10f
         }
 
         private fun history() {

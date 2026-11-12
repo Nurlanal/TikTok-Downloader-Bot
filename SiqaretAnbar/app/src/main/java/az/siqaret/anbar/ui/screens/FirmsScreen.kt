@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.ChevronRight
@@ -37,13 +39,18 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -174,8 +181,13 @@ fun FirmDetailScreen(
     onBack: () -> Unit,
     onAddProduct: (firmId: Long?) -> Unit,
     onEditProduct: (Long) -> Unit,
+    onAddInvoice: (firmId: Long) -> Unit = {},
+    onOpenInvoice: (invoiceId: Long) -> Unit = {},
 ) {
     val summaries by vm.firmSummaries.collectAsStateWithLifecycle()
+    val allInvoices by vm.invoiceSummaries.collectAsStateWithLifecycle()
+    val invoices = remember(allInvoices, firmId) { allInvoices.filter { it.invoice.firmId == firmId } }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
     val all by vm.products.collectAsStateWithLifecycle()
     val isNoFirm = firmId == InventoryViewModel.NO_FIRM_FILTER
     val summary = summaries.firstOrNull { if (isNoFirm) it.firm == null else it.firm?.id == firmId }
@@ -205,9 +217,9 @@ fun FirmDetailScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { onAddProduct(firm?.id) },
-                icon = { Icon(Icons.Filled.Add, null) },
-                text = { Text("Siqaret əlavə et") },
+                onClick = { if (firm != null) onAddInvoice(firm.id) else onAddProduct(null) },
+                icon = { Icon(if (firm != null) Icons.AutoMirrored.Filled.ReceiptLong else Icons.Filled.Add, null) },
+                text = { Text(if (firm != null) "Qaimə əlavə et" else "Siqaret əlavə et") },
                 shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -265,11 +277,59 @@ fun FirmDetailScreen(
                     }
                 }
             }
+            if (firm != null) {
+                item(key = "tabs") {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = tab == 0, onClick = { tab = 0 },
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            label = { Text("Siqaretlər (${products.size})") },
+                        )
+                        SegmentedButton(
+                            selected = tab == 1, onClick = { tab = 1 },
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            label = { Text("Qaimələr (${invoices.size})") },
+                        )
+                    }
+                }
+            }
+            if (firm != null && tab == 1) {
+                if (invoices.isEmpty()) {
+                    item(key = "noInvoices") {
+                        EmptyState(
+                            Icons.AutoMirrored.Filled.ReceiptLong, "Qaimə yoxdur",
+                            "\"Qaimə əlavə et\" düyməsinə basın və firmadan gələn siqaretləri alt-alta yazın. " +
+                                "Yadda saxlayanda hamısı stoka əlavə olunacaq.",
+                        )
+                    }
+                } else {
+                    item(key = "invTotal") {
+                        Text(
+                            "Cəmi alış: ${Fmt.money(az.siqaret.anbar.util.InventoryCalc.sum(invoices.map { it.totalAmount }))}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                items(invoices, key = { "inv${it.invoice.id}" }) { inv ->
+                    InvoiceCard(inv, onClick = { onOpenInvoice(inv.invoice.id) }, modifier = Modifier.animateItem())
+                }
+                return@LazyColumn
+            }
+            if (firm != null) {
+                item(key = "addSingle") {
+                    OutlinedButton(
+                        onClick = { onAddProduct(firm.id) },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                    ) { Icon(Icons.Filled.Add, null); HSpace(6.dp); Text("Siqaret əlavə et") }
+                }
+            }
             if (products.isEmpty()) {
                 item {
                     EmptyState(
                         Icons.Filled.SmokingRooms, "Bu firmada siqaret yoxdur",
-                        "\"Siqaret əlavə et\" düyməsi ilə bu firmadan alınan siqaretləri əlavə edin.",
+                        "\"Qaimə əlavə et\" ilə bir neçə siqareti birdən, \"Siqaret əlavə et\" ilə isə tək-tək əlavə edin.",
                     )
                 }
             }
@@ -299,8 +359,8 @@ fun FirmDetailScreen(
             title = { Text("Firma silinsin?") },
             text = {
                 Text(
-                    "\"${firm.name}\" silinəcək. Bu firmanın ${summary.stats.productCount} siqareti silinməyəcək, " +
-                        "\"${FirmSummary.NO_FIRM}\" bölməsinə keçəcək."
+                    "\"${firm.name}\" və onun ${invoices.size} qaiməsi silinəcək. Bu firmanın ${summary.stats.productCount} " +
+                        "siqareti və stoku silinməyəcək, \"${FirmSummary.NO_FIRM}\" bölməsinə keçəcək."
                 )
             },
             confirmButton = {

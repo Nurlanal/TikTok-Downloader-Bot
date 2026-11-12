@@ -2,6 +2,9 @@ package az.siqaret.anbar.util
 
 import az.siqaret.anbar.data.Firm
 import az.siqaret.anbar.data.HistoryEntry
+import az.siqaret.anbar.data.Invoice
+import az.siqaret.anbar.data.InvoiceItem
+import az.siqaret.anbar.data.title
 import az.siqaret.anbar.data.HistoryType
 import az.siqaret.anbar.data.Product
 import az.siqaret.anbar.data.totalAmount
@@ -79,12 +82,29 @@ data class FirmSummary(val firm: Firm?, val products: List<Product>) {
     }
 }
 
+/** Qaimə + sətirləri + cəmlər. */
+data class InvoiceSummary(val invoice: Invoice, val items: List<InvoiceItem>, val firmName: String) {
+    val title: String get() = invoice.title
+    val totalBlocks: Long = items.sumOf { it.blockCount.toLong() }
+    val totalBoxes: Long = totalBlocks * InventoryCalc.BOXES_PER_BLOCK
+    val totalAmount: Double = InventoryCalc.sum(items.map { InventoryCalc.totalAmount(it.blockCount, it.blockPrice) })
+
+    companion object {
+        fun build(invoices: List<Invoice>, items: List<InvoiceItem>, firms: List<Firm>): List<InvoiceSummary> {
+            val byInvoice = items.groupBy { it.invoiceId }
+            val names = firms.associate { it.id to it.name }
+            return invoices.map { InvoiceSummary(it, byInvoice[it.id].orEmpty(), names[it.firmId] ?: "—") }
+        }
+    }
+}
+
 data class ReportData(
     val products: List<Product>,
     val history: List<HistoryEntry>,
     val period: Period,
     val generatedAt: Long,
     val firms: List<Firm> = emptyList(),
+    val invoices: List<InvoiceSummary> = emptyList(),
 ) {
     val stats: InventoryStats get() = InventoryStats.from(products)
     val days: List<DaySummary> get() = DaySummary.group(history)

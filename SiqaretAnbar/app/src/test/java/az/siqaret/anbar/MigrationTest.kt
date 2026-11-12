@@ -11,7 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** v1.0.0 bazası (firmalarsız) yeni versiyaya keçəndə məlumatlar itməməlidir. */
+/** v1.0.0 bazası (firmalarsız, qaiməsiz) v3-ə keçəndə məlumatlar itməməlidir. */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
 class MigrationTest {
@@ -44,6 +44,10 @@ class MigrationTest {
             val firmId = room.firmDao().insert(az.siqaret.anbar.data.Firm(name = "Azərsun"))
             room.productDao().update(products[0].copy(firmId = firmId))
             assertEquals(firmId, room.productDao().getById(1)!!.firmId)
+            // v3: qaimə cədvəlləri
+            val invId = room.invoiceDao().insert(az.siqaret.anbar.data.Invoice(firmId = firmId, number = "1", date = 1L))
+            assertEquals(1, room.invoiceDao().getSince(0).size)
+            assertEquals(invId, room.invoiceDao().getById(invId)!!.id)
         } finally {
             room.close()
         }

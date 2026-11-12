@@ -7,12 +7,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import az.siqaret.anbar.data.Firm
 import az.siqaret.anbar.data.HistoryEntry
+import az.siqaret.anbar.data.Invoice
+import az.siqaret.anbar.data.InvoiceItem
 import az.siqaret.anbar.data.InventoryRepository
 import az.siqaret.anbar.data.Product
 import az.siqaret.anbar.data.totalAmount
 import az.siqaret.anbar.util.FirmSummary
 import az.siqaret.anbar.util.Fmt
+import az.siqaret.anbar.util.InventoryCalc
 import az.siqaret.anbar.util.InventoryStats
+import az.siqaret.anbar.util.InvoiceSummary
 import az.siqaret.anbar.util.PdfExporter
 import az.siqaret.anbar.util.Period
 import az.siqaret.anbar.util.ReportData
@@ -75,6 +79,10 @@ class InventoryViewModel(
         combine(products, firms) { p, f -> FirmSummary.group(p, f) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    val invoiceSummaries: StateFlow<List<InvoiceSummary>> =
+        combine(repo.invoices, repo.invoiceItems, firms) { inv, items, f -> InvoiceSummary.build(inv, items, f) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val history: StateFlow<List<HistoryEntry>> =
         repo.history.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -129,6 +137,53 @@ class InventoryViewModel(
                 id
             }
             onResult(null, newId)
+        }
+    }
+
+    /** Qaimə formasının bir sətri (ekrandan gələn xam mətn dəyərləri). */
+    data class InvoiceLineInput(val name: String, val boxPrice: Double?, val blockPrice: Double?, val blocks: Int?) {
+        val isBlank: Boolean get() = name.isBlank() && boxPrice == null && blockPrice == null && (blocks == null || blocks == 0)
+    }
+
+    suspend fun getInvoice(id: Long): Pair<Invoice, List<InvoiceItem>>? = repo.getInvoice(id)
+
+    /** Qaiməni doğrula və yadda saxla. onResult(xəta, qaiməId) */
+    fun saveInvoice(
+        firmId: Long, number: String, date: Long, note: String, lines: List<InvoiceLineInput>,
+        onResult: (String?, Long?) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val filled = lines.withIndex().filterNot { it.value.isBlank }
+            if (filled.isEmpty()) { onResult("Ən azı bir siqaret sətri doldurun", null); return@launch }
+            val seen = HashMap<String, Int>()
+            val clean = ArrayList<InventoryRepository.InvoiceLine>()
+            for ((i, l) in filled) {
+                val row = i + 1
+                val n = l.name.trim().replace(Regex("\\s+"), " ")
+                val err = when {
+                    n.isEmpty() -> "Sətir $row: siqaretin adını yazın"
+                    n.length > 60 -> "Sətir $row: ad çox uzundur"
+                    l.blockPrice == null || l.blockPrice <= 0.0 -> "Sətir $row ($n): blok qiymətini yazın"
+                    l.blocks == null || l.blocks <= 0 -> "Sətir $row ($n): blok sayını yazın"
+                    seen.containsKey(n.lowercase()) -> "\"$n\" qaimədə iki dəfə yazılıb (sətir ${seen[n.lowercase()]} və $row)"
+                    else -> null
+                }
+                if (err != null) { onResult(err, null); return@launch }
+                seen[n.lowercase()] = row
+                clean += InventoryRepository.InvoiceLine(n, l.boxPrice ?: 0.0, l.blockPrice!!, l.blocks!!)
+            }
+            val id = repo.saveInvoice(firmId, number.trim(), date, note.trim(), clean)
+            val total = InventoryCalc.sum(clean.map { InventoryCalc.totalAmount(it.blocks, it.blockPrice) })
+            say("Qaimə yadda saxlanıldı: ${clean.size} siqaret, ${Fmt.money(total)}")
+            onResult(null, id)
+        }
+    }
+
+    fun deleteInvoice(id: Long, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val err = repo.deleteInvoice(id)
+            if (err != null) say(err) else say("Qaimə silindi, bloklar stokdan çıxıldı")
+            onDone(err == null)
         }
     }
 
@@ -201,6 +256,9 @@ class InventoryViewModel(
             period = period,
             generatedAt = now,
             firms = repo.allFirms(),
+            invoices = repo.invoicesSince(period.from(now)).let { (inv, items) ->
+                InvoiceSummary.build(inv, items, repo.allFirms())
+            },
         )
     }
 

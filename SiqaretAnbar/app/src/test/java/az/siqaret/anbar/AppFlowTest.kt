@@ -250,4 +250,65 @@ class AppFlowTest {
             assert(it.isEmpty()) { "420.00 ₼ görünməməlidir" }
         }
     }
+
+    private fun nth(label: String, i: Int) =
+        rule.onAllNodes(hasSetTextAction() and hasText(label, substring = true))[i]
+
+    /** Firma → Qaimə əlavə et → siqaretlər alt-alta → yadda saxla → stok artır. */
+    @Test
+    fun invoiceFlow() {
+        waitText("Hələ məhsul yoxdur")
+        click("Firmalar")
+        waitText("Hələ firma yoxdur")
+        click("Firma əlavə et")
+        fillDialog("Yeni firma") { field("Firmanın adı").performTextInput("Azərsun MMC") }
+        click("Yadda saxla")
+        waitText("Bu firmadakı stok dəyəri")
+
+        // Qaimə 1: iki sətir
+        click("Qaimə əlavə et")
+        waitText("Yeni qaimə")
+        field("Qaimə №").performTextInput("A-101")
+        nth("Siqaretin adı", 0).performTextInput("Marlboro Red")
+        nth("Blok qiyməti", 0).performTextInput("41.97")
+        nth("Blok sayı", 0).performTextInput("10")
+        waitText("419.70 ₼")
+        click("Yeni sətir əlavə et")
+        nth("Siqaretin adı", 1).performTextInput("Kent")
+        nth("Paçka qiyməti", 1).performTextInput("3.2")
+        nth("Blok sayı", 1).performTextInput("5")
+        waitText("160.00 ₼")
+        waitText("2 sətir · 15 blok · 150 paçka")
+        waitText("579.70 ₼")
+        shot("30_invoice_form")
+        click("Qaiməni yadda saxla")
+
+        // Firma səhifəsi: iki siqaret stokda
+        waitText("Bu firmadakı stok dəyəri")
+        waitText("579.70 ₼")
+        waitText("Siqaretlər (2)")
+        shot("31_firm_after_invoice")
+        click("Qaimələr (1)")
+        waitText("Qaimə № A-101")
+        shot("32_firm_invoices")
+
+        // Qaimə 2: mövcud siqaret -> stok artır, yeni məhsul yaranmır
+        click("Qaimə əlavə et")
+        waitText("Yeni qaimə")
+        nth("Siqaretin adı", 0).performTextInput("Marlboro Red")
+        waitText("Stokda var: 10 blok")
+        nth("Blok qiyməti", 0).performTextInput("41.97")
+        nth("Blok sayı", 0).performTextInput("2")
+        click("Qaiməni yadda saxla")
+        waitText("Qaimələr (2)")
+        click("Siqaretlər (2)")
+        waitText("12 blok")
+
+        // Qaiməyə bax
+        click("Qaimələr (2)")
+        click("Qaimə № A-101")
+        waitText("10 blok × 41.97 ₼ · 100 paçka × 4.197 ₼")
+        waitText("CƏMİ")
+        shot("33_invoice_detail")
+    }
 }

@@ -133,6 +133,16 @@ class CalcAndExportTest {
                 product(2, "Kent Nanotek", 30.0, 3),
             ),
             firms = listOf(az.siqaret.anbar.data.Firm(7, "Azərsun MMC", "+994 50 000 00 00")),
+            invoices = listOf(
+                az.siqaret.anbar.util.InvoiceSummary(
+                    az.siqaret.anbar.data.Invoice(1, 7, "A-101", now),
+                    listOf(
+                        az.siqaret.anbar.data.InvoiceItem(1, 1, 1, "Marlboro Red", 4.197, 41.97, 10),
+                        az.siqaret.anbar.data.InvoiceItem(2, 1, 2, "Kent", 3.2, 32.0, 5),
+                    ),
+                    "Azərsun MMC",
+                ),
+            ),
             history = listOf(HistoryEntry(1, 1, "Marlboro", HistoryType.ADDED, 12, 12, 34.0, "qeyd", now)),
             period = Period.ALL,
             generatedAt = now,
@@ -158,6 +168,7 @@ class CalcAndExportTest {
             }
         }
         assertTrue(names.contains("xl/worksheets/sheet4.xml"))
+        assertTrue(names.contains("xl/worksheets/sheet5.xml"))
         assertTrue(names.containsAll(listOf("[Content_Types].xml", "xl/workbook.xml", "xl/styles.xml", "xl/worksheets/sheet1.xml")))
         assertEquals("A", XlsxExporter.col(0))
         assertEquals("Z", XlsxExporter.col(25))
