@@ -1,0 +1,19 @@
+[
+  {
+    "id": 1,
+    "categoryId": 1,
+    "name": "Süd 1L",
+    "description": "",
+    "price": "1.80",
+    "oldPrice": "2.20",
+    "unit": "ədəd",
+    "stock": 50,
+    "inStock": true,
+    "barcode": "123",
+    "imageUrl": null,
+    "isActive": true,
+    "isNew": true,
+    "soldCount": 0,
+    "lowStockThreshold": 5
+  }
+]

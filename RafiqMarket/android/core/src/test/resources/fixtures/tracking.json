@@ -1,0 +1,21 @@
+{
+  "orderId": 1,
+  "status": "PICKED_UP",
+  "active": true,
+  "courier": {
+    "name": "Elvin",
+    "phone": "+994501000004"
+  },
+  "location": {
+    "lat": 40.004,
+    "lng": 49.004,
+    "heading": 12.5,
+    "speed": 3,
+    "accuracy": 5,
+    "updatedAt": "2026-11-12T14:22:48.842Z"
+  },
+  "destination": {
+    "lat": 40.005,
+    "lng": 49.005
+  }
+}

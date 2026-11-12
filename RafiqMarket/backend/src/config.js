@@ -41,5 +41,8 @@ export const config = {
 if (config.isProd) {
   if (config.jwtSecret.length < 32) throw new Error('JWT_SECRET ən azı 32 simvol olmalıdır');
   if (config.sms.provider === 'console') throw new Error('Production rejimində SMS_PROVIDER=console qadağandır');
+  if (config.sms.provider === 'twilio' && !(config.sms.twilioSid && config.sms.twilioToken && config.sms.twilioFrom)) {
+    throw new Error('SMS üçün TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN və TWILIO_FROM təyin edilməlidir');
+  }
   if (!config.publicBaseUrl.startsWith('https://')) throw new Error('Production rejimində PUBLIC_BASE_URL https:// ilə başlamalıdır');
 }

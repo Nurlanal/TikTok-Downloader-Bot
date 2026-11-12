@@ -1,0 +1,18 @@
+[Unit]
+Description=Rafiq Market API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=rafiq
+WorkingDirectory=/opt/rafiq-market/backend
+EnvironmentFile=/opt/rafiq-market/backend/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/rafiq-market/backend/uploads
+
+[Install]
+WantedBy=multi-user.target

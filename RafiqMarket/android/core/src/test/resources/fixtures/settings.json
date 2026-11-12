@@ -1,0 +1,28 @@
+{
+  "deliveryFee": "1.50",
+  "minOrderAmount": "5.00",
+  "freeDeliveryThreshold": "30.00",
+  "openTime": "00:00",
+  "closeTime": "00:00",
+  "ordersEnabled": true,
+  "deliveryZone": [
+    {
+      "lat": 40,
+      "lng": 49
+    },
+    {
+      "lat": 40,
+      "lng": 49.01
+    },
+    {
+      "lat": 40.01,
+      "lng": 49.01
+    },
+    {
+      "lat": 40.01,
+      "lng": 49
+    }
+  ],
+  "zoneName": "Xıdırlı kəndi",
+  "isOpenNow": true
+}

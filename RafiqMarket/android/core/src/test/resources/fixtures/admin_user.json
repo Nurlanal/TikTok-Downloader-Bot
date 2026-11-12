@@ -1,0 +1,46 @@
+{
+  "user": {
+    "id": 3,
+    "phone": "+994551000002",
+    "name": "Aysel",
+    "role": "CUSTOMER",
+    "isActive": true,
+    "createdAt": "2026-11-12T14:22:48.574Z"
+  },
+  "orders": [
+    {
+      "id": 1,
+      "orderNumber": "RM-1001",
+      "status": "PICKED_UP",
+      "statusLabel": "Kuryer sifarişi götürdü",
+      "paymentMethod": "CASH",
+      "paymentStatus": "PENDING",
+      "subtotal": "9.00",
+      "deliveryFee": "1.50",
+      "total": "10.50",
+      "address": {
+        "street": "Mərkəz",
+        "house": "1",
+        "note": "",
+        "lat": 40.005,
+        "lng": 49.005
+      },
+      "contactPhone": "+994501112233",
+      "contactName": "Aysel",
+      "customerNote": "",
+      "cancelReason": null,
+      "customer": null,
+      "courier": {
+        "id": 4
+      },
+      "courierAcceptedAt": "2026-11-12T14:22:48.830Z",
+      "cashConfirmedAt": null,
+      "deliveredAt": null,
+      "createdAt": "2026-11-12T14:22:48.693Z",
+      "updatedAt": "2026-11-12T14:22:48.836Z",
+      "trackingActive": true,
+      "items": [],
+      "history": []
+    }
+  ]
+}

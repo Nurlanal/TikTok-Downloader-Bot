@@ -1,0 +1,8 @@
+{
+  "code": "OUT_OF_STOCK",
+  "message": "\"Süd 1L\" üçün kifayət qədər stok yoxdur (qalıq: 45).",
+  "details": {
+    "productId": 1,
+    "available": 45
+  }
+}

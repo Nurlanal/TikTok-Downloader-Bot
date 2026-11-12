@@ -1,0 +1,13 @@
+[
+  {
+    "id": 3,
+    "phone": "+994551000002",
+    "name": "Aysel",
+    "role": "CUSTOMER",
+    "isActive": true,
+    "orderCount": 1,
+    "totalSpent": "0.00",
+    "lastOrderAt": "2026-11-12T14:22:48.693Z",
+    "createdAt": "2026-11-12T14:22:48.574Z"
+  }
+]

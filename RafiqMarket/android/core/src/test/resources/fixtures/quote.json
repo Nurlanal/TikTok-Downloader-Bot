@@ -1,0 +1,18 @@
+{
+  "lines": [
+    {
+      "productId": 1,
+      "name": "Süd 1L",
+      "unitPrice": "1.80",
+      "requestedQuantity": 5,
+      "availableQuantity": 50,
+      "ok": true
+    }
+  ],
+  "subtotal": "9.00",
+  "deliveryFee": "1.50",
+  "total": "10.50",
+  "minOrderAmount": "5.00",
+  "freeDeliveryThreshold": "30.00",
+  "meetsMinimum": true
+}

@@ -1,0 +1,11 @@
+# Bu faylı local.properties adı ilə kopyalayın (git-ə əlavə olunmur)
+sdk.dir=/path/to/Android/sdk
+
+# Release APK-nın qoşulacağı server (MÜTLƏQ https, sonu / ilə)
+RAFIQ_API_URL=https://api.rafiqmarket.az/
+
+# Debug build üçün lokal server (emulator: 10.0.2.2, real telefon: kompüterin LAN IP-si)
+RAFIQ_API_URL_DEBUG=http://10.0.2.2:8080/
+
+# Google Maps SDK for Android açarı (REAL AÇAR TƏLƏB OLUNUR)
+MAPS_API_KEY=

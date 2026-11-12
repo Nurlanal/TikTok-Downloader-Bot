@@ -1,0 +1,63 @@
+{
+  "today": {
+    "revenue": "0.00",
+    "completed": 0,
+    "cancelled": 0,
+    "orders": 1
+  },
+  "week": {
+    "revenue": "0.00",
+    "completed": 0,
+    "cancelled": 0,
+    "orders": 1
+  },
+  "month": {
+    "revenue": "0.00",
+    "completed": 0,
+    "cancelled": 0,
+    "orders": 1
+  },
+  "allTime": {
+    "revenue": "0.00",
+    "completed": 0,
+    "cancelled": 0
+  },
+  "payments": {
+    "cash": "0.00",
+    "online": "0.00",
+    "cashCount": 0,
+    "onlineCount": 0,
+    "failedPayments": 0
+  },
+  "topProducts": [],
+  "last7Days": [
+    {
+      "day": "06.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "07.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "08.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "09.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "10.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "11.11",
+      "revenue": "0.00"
+    },
+    {
+      "day": "12.11",
+      "revenue": "0.00"
+    }
+  ]
+}

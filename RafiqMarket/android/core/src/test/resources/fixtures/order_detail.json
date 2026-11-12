@@ -1,0 +1,80 @@
+{
+  "id": 1,
+  "orderNumber": "RM-1001",
+  "status": "PICKED_UP",
+  "statusLabel": "Kuryer sifarişi götürdü",
+  "paymentMethod": "CASH",
+  "paymentStatus": "PENDING",
+  "subtotal": "9.00",
+  "deliveryFee": "1.50",
+  "total": "10.50",
+  "address": {
+    "street": "Mərkəz",
+    "house": "1",
+    "note": "",
+    "lat": 40.005,
+    "lng": 49.005
+  },
+  "contactPhone": "+994501112233",
+  "contactName": "Aysel",
+  "customerNote": "",
+  "cancelReason": null,
+  "customer": {
+    "id": 3,
+    "name": "Aysel",
+    "phone": "+994551000002"
+  },
+  "courier": {
+    "id": 4,
+    "name": "Elvin",
+    "phone": "+994501000004"
+  },
+  "courierAcceptedAt": "2026-11-12T14:22:48.830Z",
+  "cashConfirmedAt": null,
+  "deliveredAt": null,
+  "createdAt": "2026-11-12T14:22:48.693Z",
+  "updatedAt": "2026-11-12T14:22:48.836Z",
+  "trackingActive": true,
+  "items": [
+    {
+      "productId": 1,
+      "name": "Süd 1L",
+      "unit": "ədəd",
+      "unitPrice": "1.80",
+      "quantity": 5,
+      "lineTotal": "9.00"
+    }
+  ],
+  "history": [
+    {
+      "status": "PLACED",
+      "label": "Sifariş göndərildi",
+      "note": null,
+      "at": "2026-11-12T14:22:48.693Z"
+    },
+    {
+      "status": "ACCEPTED",
+      "label": "Market sifarişi qəbul etdi",
+      "note": null,
+      "at": "2026-11-12T14:22:48.809Z"
+    },
+    {
+      "status": "COURIER_ASSIGNED",
+      "label": "Kuryer təyin edildi",
+      "note": null,
+      "at": "2026-11-12T14:22:48.820Z"
+    },
+    {
+      "status": "COURIER_ASSIGNED",
+      "label": "Kuryer təyin edildi",
+      "note": "Kuryer sifarişi qəbul etdi",
+      "at": "2026-11-12T14:22:48.830Z"
+    },
+    {
+      "status": "PICKED_UP",
+      "label": "Kuryer sifarişi götürdü",
+      "note": null,
+      "at": "2026-11-12T14:22:48.836Z"
+    }
+  ]
+}

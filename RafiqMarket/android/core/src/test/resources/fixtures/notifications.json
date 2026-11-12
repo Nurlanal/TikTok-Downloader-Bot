@@ -1,0 +1,26 @@
+[
+  {
+    "id": 5,
+    "title": "Kuryer sifarişinizi götürdü",
+    "body": "Sifariş RM-1001",
+    "orderId": 1,
+    "isRead": false,
+    "createdAt": "2026-11-12T14:22:48.839Z"
+  },
+  {
+    "id": 4,
+    "title": "Kuryer təyin edildi",
+    "body": "Sifariş RM-1001",
+    "orderId": 1,
+    "isRead": false,
+    "createdAt": "2026-11-12T14:22:48.824Z"
+  },
+  {
+    "id": 2,
+    "title": "Sifarişiniz qəbul edildi",
+    "body": "Sifariş RM-1001",
+    "orderId": 1,
+    "isRead": false,
+    "createdAt": "2026-11-12T14:22:48.816Z"
+  }
+]

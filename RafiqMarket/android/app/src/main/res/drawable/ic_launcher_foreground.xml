@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rafiq Market loqosu: alış-veriş çantası və "R" hərfi -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- sap -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:fillColor="#00000000"
+        android:pathData="M44,44 L44,40 A10,10 0 0 1 64,40 L64,44" />
+    <!-- çanta -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M36,44 L72,44 Q76,44 76,48 L76,74 Q76,80 70,80 L38,80 Q32,80 32,74 L32,48 Q32,44 36,44 Z" />
+    <!-- R -->
+    <path android:fillColor="#FF2E7D32"
+        android:pathData="M46,52 L56,52 Q63,52 63,58.5 Q63,63.5 58.5,64.6 L64,73 L58.6,73 L53.7,65 L51,65 L51,73 L46,73 Z M51,56 L51,61 L55.6,61 Q58,61 58,58.5 Q58,56 55.6,56 Z" />
+</vector>

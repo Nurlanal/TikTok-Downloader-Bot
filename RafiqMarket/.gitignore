@@ -11,3 +11,4 @@ android/*.jks
 android/app/google-services.json
 android/.idea/
 *.iml
+android/.kotlin/

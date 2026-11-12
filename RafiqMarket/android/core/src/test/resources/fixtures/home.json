@@ -1,0 +1,74 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Süd",
+      "icon": "🥛",
+      "color": "#2E7D32",
+      "sortOrder": 0,
+      "isActive": true
+    }
+  ],
+  "banners": [
+    {
+      "id": 1,
+      "title": "Endirim",
+      "subtitle": "",
+      "imageUrl": null,
+      "color": "#1B5E20",
+      "categoryId": 1,
+      "sortOrder": 0,
+      "isActive": true
+    }
+  ],
+  "discounted": [
+    {
+      "id": 1,
+      "categoryId": 1,
+      "name": "Süd 1L",
+      "description": "",
+      "price": "1.80",
+      "oldPrice": "2.20",
+      "unit": "ədəd",
+      "stock": 50,
+      "inStock": true,
+      "barcode": "123",
+      "imageUrl": null,
+      "isActive": true,
+      "isNew": true,
+      "soldCount": 0,
+      "lowStockThreshold": 5
+    }
+  ],
+  "newProducts": [
+    {
+      "id": 1,
+      "categoryId": 1,
+      "name": "Süd 1L",
+      "description": "",
+      "price": "1.80",
+      "oldPrice": "2.20",
+      "unit": "ədəd",
+      "stock": 50,
+      "inStock": true,
+      "barcode": "123",
+      "imageUrl": null,
+      "isActive": true,
+      "isNew": true,
+      "soldCount": 0,
+      "lowStockThreshold": 5
+    }
+  ],
+  "bestSellers": [],
+  "settings": {
+    "deliveryFee": "1.50",
+    "minOrderAmount": "5.00",
+    "freeDeliveryThreshold": "30.00",
+    "openTime": "00:00",
+    "closeTime": "00:00",
+    "ordersEnabled": true,
+    "zoneName": "Xıdırlı kəndi",
+    "isOpenNow": true,
+    "zoneConfigured": true
+  }
+}

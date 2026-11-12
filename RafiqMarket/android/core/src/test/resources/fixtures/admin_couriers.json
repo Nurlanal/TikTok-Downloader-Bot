@@ -1,0 +1,17 @@
+[
+  {
+    "id": 4,
+    "phone": "+994501000004",
+    "name": "Elvin",
+    "role": "COURIER",
+    "isActive": true,
+    "deliveredToday": 0,
+    "deliveredTotal": 0,
+    "activeOrders": 1,
+    "location": {
+      "lat": 40.004,
+      "lng": 49.004,
+      "updatedAt": "2026-11-12T14:22:48.842Z"
+    }
+  }
+]
