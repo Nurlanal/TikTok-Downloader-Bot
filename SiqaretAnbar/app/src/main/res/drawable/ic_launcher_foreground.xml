@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 3D siqaret qutusu -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- kölgə -->
+    <path android:fillColor="#40000000"
+        android:pathData="M38,78 L68,78 L78,72 L48,72 Z" />
+    <!-- qutunun açıq üst hissəsi (daxili) -->
+    <path android:fillColor="#FF7C2D12"
+        android:pathData="M36,40 L64,40 L72,34 L44,34 Z" />
+    <!-- siqaretlər -->
+    <path android:fillColor="#FFF8FAFC" android:pathData="M44,38 L44,28 Q44,26.5 45.5,26.5 L48.5,26.5 Q50,26.5 50,28 L50,38 Z" />
+    <path android:fillColor="#FFF59E0B" android:pathData="M44,31 L44,28 Q44,26.5 45.5,26.5 L48.5,26.5 Q50,26.5 50,28 L50,31 Z" />
+    <path android:fillColor="#FFF8FAFC" android:pathData="M51.5,38 L51.5,24 Q51.5,22.5 53,22.5 L56,22.5 Q57.5,22.5 57.5,24 L57.5,38 Z" />
+    <path android:fillColor="#FFF59E0B" android:pathData="M51.5,27 L51.5,24 Q51.5,22.5 53,22.5 L56,22.5 Q57.5,22.5 57.5,24 L57.5,27 Z" />
+    <path android:fillColor="#FFF8FAFC" android:pathData="M59,37 L59,30 Q59,28.5 60.5,28.5 L63.5,28.5 Q65,28.5 65,30 L65,37 Z" />
+    <path android:fillColor="#FFF59E0B" android:pathData="M59,33 L59,30 Q59,28.5 60.5,28.5 L63.5,28.5 Q65,28.5 65,30 L65,33 Z" />
+    <!-- yan üz -->
+    <path android:pathData="M64,40 L72,34 L72,70 L64,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="64" android:startY="40" android:endX="72" android:endY="72">
+                <item android:offset="0" android:color="#FFB45309" />
+                <item android:offset="1" android:color="#FF78350F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- ön üz -->
+    <path android:pathData="M36,40 L64,40 L64,76 L36,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="36" android:startY="40" android:endX="64" android:endY="76">
+                <item android:offset="0" android:color="#FFFCD34D" />
+                <item android:offset="0.5" android:color="#FFF59E0B" />
+                <item android:offset="1" android:color="#FFD97706" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- etiket -->
+    <path android:fillColor="#FFFFFBEB" android:pathData="M39,52 L61,52 L61,64 L39,64 Z" />
+    <path android:fillColor="#FF4338CA" android:pathData="M42,56 L58,56 L58,58 L42,58 Z" />
+    <path android:fillColor="#FF4338CA" android:pathData="M45,60 L55,60 L55,61.5 L45,61.5 Z" />
+    <!-- parıltı -->
+    <path android:fillColor="#55FFFFFF" android:pathData="M37,41 L40,41 L40,75 L37,75 Z" />
+</vector>
