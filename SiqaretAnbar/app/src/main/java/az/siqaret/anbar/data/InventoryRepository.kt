@@ -79,7 +79,7 @@ class InventoryRepository(private val db: AppDatabase) {
             val changes = buildList {
                 if (old.name != name) add("Ad: ${old.name} → $name")
                 if (old.firmId != firmId) add("Firma: ${firmLabel(old.firmId) ?: "—"} → ${firmLabel(firmId) ?: "—"}")
-                if (old.boxPrice != boxPrice) add("Paçka: ${Fmt.money(old.boxPrice)} → ${Fmt.money(boxPrice)}")
+                if (old.boxPrice != boxPrice) add("Paçka: ${Fmt.price(old.boxPrice)} → ${Fmt.price(boxPrice)}")
                 if (old.blockPrice != blockPrice) add("Blok: ${Fmt.money(old.blockPrice)} → ${Fmt.money(blockPrice)}")
                 if (old.blockCount != blocks) add("Say: ${old.blockCount} → $blocks blok")
             }

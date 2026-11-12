@@ -44,6 +44,35 @@ class CalcAndExportTest {
         assertEquals(3.45, InventoryCalc.boxPriceFromBlock(34.5), 0.0)
     }
 
+    @Test fun kopecksSurvivePriceLinking() {
+        // İstifadəçinin nümunəsi: 10 blok × 41.97 = 419.70 (420 yox)
+        assertEquals(4.197, InventoryCalc.boxPriceFromBlock(41.97), 0.0)
+        assertEquals(41.97, InventoryCalc.blockPriceFromBox(4.197), 0.0)
+        assertEquals(419.7, InventoryCalc.totalAmount(10, 41.97), 0.0)
+        assertEquals("419.70 ₼", Fmt.money(InventoryCalc.totalAmount(10, 41.97)))
+        assertEquals("4.197", Fmt.inputNumber(InventoryCalc.boxPriceFromBlock(41.97)))
+        assertEquals("4.197 ₼", Fmt.price(4.197))
+        assertEquals("4.20 ₼", Fmt.price(4.2))
+        assertEquals("4.197", Fmt.sanitizeDecimal("4,1975", maxDecimals = 3))
+
+        // Bütün qiymətlər 0.01 ... 300.00: blok → paçka → blok heç vaxt dəyişməməlidir
+        for (cents in 1..30_000) {
+            val block = cents / 100.0
+            val back = InventoryCalc.blockPriceFromBox(
+                Fmt.parseDecimal(Fmt.inputNumber(InventoryCalc.boxPriceFromBlock(block)))!!
+            )
+            assertEquals("blok $block", block, back, 0.0)
+            assertEquals(java.math.BigDecimal.valueOf(cents.toLong()).multiply(java.math.BigDecimal.valueOf(37)).movePointLeft(2).toDouble(),
+                InventoryCalc.totalAmount(37, block), 0.0)
+        }
+    }
+
+    @Test fun sumIsExact() {
+        // 0.1 + 0.2 kimi double xətaları cəmdə görünməməlidir
+        assertEquals(0.3, InventoryCalc.sum(listOf(0.1, 0.2)), 0.0)
+        assertEquals(1000.01, InventoryCalc.sum(List(100_001) { 0.01 }), 0.0)
+    }
+
     @Test fun statsAggregate() {
         val s = InventoryStats.from(listOf(product(1, "A", 25.0, 10), product(2, "B", 32.5, 4)))
         assertEquals(2, s.productCount)

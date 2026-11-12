@@ -22,6 +22,12 @@ object Fmt {
         DecimalFormat("#,##0.00", symbols()).apply { roundingMode = RoundingMode.HALF_UP }.format(v)
 
     fun money(v: Double): String = number(v) + " ₼"
+
+    /** Qiymət: ən azı 2, lazım olduqda 3 onluq rəqəm (4.20 / 4.197). */
+    fun priceNumber(v: Double): String =
+        DecimalFormat("#,##0.00#", symbols()).apply { roundingMode = RoundingMode.HALF_UP }.format(v)
+
+    fun price(v: Double): String = priceNumber(v) + " ₼"
     fun moneyAzn(v: Double): String = number(v) + " AZN"
     fun count(v: Long): String = DecimalFormat("#,##0", symbols()).format(v)
     fun count(v: Int): String = count(v.toLong())
@@ -34,15 +40,15 @@ object Fmt {
         return t.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }
     }
 
-    /** Daxiletmə sahəsi üçün: yalnız rəqəmlər, bir ayırıcı və maksimum 2 onluq rəqəm. */
-    fun sanitizeDecimal(s: String): String {
+    /** Daxiletmə sahəsi üçün: yalnız rəqəmlər, bir ayırıcı və maksimum [maxDecimals] onluq rəqəm. */
+    fun sanitizeDecimal(s: String, maxDecimals: Int = 2): String {
         val sb = StringBuilder()
         var sep = false
         var decimals = 0
         for (ch in s) {
             when {
                 ch.isDigit() -> {
-                    if (sep) { if (decimals >= 2) continue; decimals++ }
+                    if (sep) { if (decimals >= maxDecimals) continue; decimals++ }
                     if (sb.length < 12) sb.append(ch)
                 }
                 (ch == '.' || ch == ',') && !sep -> { sep = true; sb.append(if (sb.isEmpty()) "0." else ".") }
@@ -56,7 +62,7 @@ object Fmt {
     }
 
     fun inputNumber(v: Double): String =
-        BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        BigDecimal.valueOf(v).setScale(3, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
 
     fun date(ms: Long): String = SimpleDateFormat("dd.MM.yyyy", AZ).format(Date(ms))
     fun time(ms: Long): String = SimpleDateFormat("HH:mm", AZ).format(Date(ms))

@@ -217,4 +217,37 @@ class AppFlowTest {
         waitText("1 məhsul")
         waitText("Kent")
     }
+
+    /** Qəpik dəqiqliyi: 10 blok × 41.97 ₼ = 419.70 ₼ olmalıdır (420 yox). */
+    @Test
+    fun kopecksAreNotLost() {
+        waitText("Hələ məhsul yoxdur")
+        addProduct("Qəpik testi", boxPrice = null, blockPrice = "41.97", blocks = "10")
+        waitText("10 blok × 41.97 ₼ = 419.70 ₼")
+
+        // "Avtomatik qiymət" söndür və yandır: blok qiyməti dəyişməməlidir
+        val toggle = rule.onNode(androidx.compose.ui.test.isToggleable())
+        toggle.performScrollTo().performClick()
+        toggle.performClick()
+        waitText("10 blok × 41.97 ₼ = 419.70 ₼")
+        shot("20_kopecks_form")
+
+        click("Məhsulu əlavə et")
+        waitText("Siqaret Anbarı")
+        waitText("419.70 ₼")
+
+        // Redaktə edib yadda saxladıqda da qəpik itməməlidir
+        click("Qəpik testi")
+        waitText("Məhsulu redaktə et")
+        val toggle2 = rule.onNode(androidx.compose.ui.test.isToggleable())
+        toggle2.performScrollTo().performClick()
+        toggle2.performClick()
+        waitText("10 blok × 41.97 ₼ = 419.70 ₼")
+        click("Dəyişiklikləri yadda saxla")
+        waitText("Siqaret Anbarı")
+        waitText("419.70 ₼")
+        rule.onAllNodesWithText("420.00 ₼", substring = true).fetchSemanticsNodes().let {
+            assert(it.isEmpty()) { "420.00 ₼ görünməməlidir" }
+        }
+    }
 }

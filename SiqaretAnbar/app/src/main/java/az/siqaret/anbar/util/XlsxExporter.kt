@@ -24,6 +24,7 @@ object XlsxExporter {
     private const val S_TOTAL_INT = 7
     private const val S_TITLE = 8
     private const val S_SUB = 9
+    private const val S_PRICE3 = 10
 
     private sealed interface Cell { val style: Int }
     private data class Str(val v: String, override val style: Int = S_TEXT) : Cell
@@ -67,7 +68,7 @@ object XlsxExporter {
                 Num((i + 1).toDouble(), S_INT),
                 Str(p.name),
                 Str(data.firmName(p).ifEmpty { FirmSummary.NO_FIRM }),
-                Num(p.boxPrice),
+                Num(p.boxPrice, S_PRICE3),
                 Num(p.blockPrice),
                 Num(p.blockCount.toDouble(), S_INT),
                 Formula("F$r*${InventoryCalc.BOXES_PER_BLOCK}", p.totalBoxes.toDouble(), S_INT),
@@ -265,7 +266,7 @@ object XlsxExporter {
 
     private fun styles() = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00 &quot;₼&quot;"/></numFmts>
+<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00 &quot;₼&quot;"/><numFmt numFmtId="165" formatCode="#,##0.00# &quot;₼&quot;"/></numFmts>
 <fonts count="5">
 <font><sz val="11"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>
@@ -284,7 +285,7 @@ object XlsxExporter {
 <border><left style="thin"><color rgb="FFD0D5DD"/></left><right style="thin"><color rgb="FFD0D5DD"/></right><top style="thin"><color rgb="FFD0D5DD"/></top><bottom style="thin"><color rgb="FFD0D5DD"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="10">
+<cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
@@ -295,6 +296,7 @@ object XlsxExporter {
 <xf numFmtId="3" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
 <xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>"""

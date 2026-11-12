@@ -166,7 +166,7 @@ object PdfExporter {
                 drawRow(
                     cols,
                     listOf(
-                        "${i + 1}", p.name, data.firmName(p).ifEmpty { "—" }, Fmt.number(p.boxPrice), Fmt.number(p.blockPrice),
+                        "${i + 1}", p.name, data.firmName(p).ifEmpty { "—" }, Fmt.priceNumber(p.boxPrice), Fmt.number(p.blockPrice),
                         Fmt.count(p.blockCount), Fmt.count(p.totalBoxes), Fmt.number(p.totalAmount),
                     ),
                     y + 12.5f, text,

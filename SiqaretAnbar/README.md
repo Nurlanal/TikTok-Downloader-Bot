@@ -2,7 +2,7 @@
 
 Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android tətbiqi.
 
-**Hazır APK:** [`apk/SiqaretAnbar-1.1.0.apk`](apk/SiqaretAnbar-1.1.0.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin). 1.0.0 versiyası quraşdırılıbsa, üstündən yazın: məlumatlar saxlanılır.
+**Hazır APK:** [`apk/SiqaretAnbar-1.1.1.apk`](apk/SiqaretAnbar-1.1.1.apk) (Android 7.0+). Telefona köçürün və quraşdırın ("Naməlum mənbələr"ə icazə verin). Köhnə versiya quraşdırılıbsa, üstündən yazın: məlumatlar saxlanılır.
 
 | Ana səhifə | Firmalar | Firmanın siqaretləri | Firmaya siqaret əlavə et |
 |---|---|---|---|
@@ -29,6 +29,8 @@ Kotlin + Jetpack Compose + Room ilə yazılmış, tam offline işləyən Android
 - `Blok sayı × 10 = ümumi paçka sayı`
 - "Avtomatik qiymət" açıqdırsa: paçka qiymətini yazanda blok qiyməti (× 10) özü doldurulur və əksinə.
 - Hesablamalar `BigDecimal` ilə aparılır, ona görə qəpik xətası olmur.
+- Paçka qiyməti blokdan hesablananda yuvarlaqlaşdırılmır: 41.97 ₼ blok → 4.197 ₼ paçka, 10 blok = 419.70 ₼ (1.1.1-də düzəldildi; əvvəl bəzi hallarda 420.00 ₼ çıxırdı).
+- "Avtomatik qiymət" yandırılanda digər qiymət son yazdığınız sahədən hesablanır, artıq yazılmış blok qiymətinə toxunulmur.
 
 **Ana səhifə:** ümumi stok dəyəri, məhsul sayı, ümumi blok sayı, ümumi paçka sayı.
 

@@ -350,7 +350,7 @@ fun ProductCard(
                         }
                     }
                     Text(
-                        "Blok: ${Fmt.money(product.blockPrice)}  ·  Paçka: ${Fmt.money(product.boxPrice)}",
+                        "Blok: ${Fmt.money(product.blockPrice)}  ·  Paçka: ${Fmt.price(product.boxPrice)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,

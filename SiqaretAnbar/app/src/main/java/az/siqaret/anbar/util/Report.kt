@@ -20,7 +20,7 @@ data class InventoryStats(
                 productCount = products.size,
                 totalBlocks = blocks,
                 totalBoxes = blocks * InventoryCalc.BOXES_PER_BLOCK,
-                totalValue = InventoryCalc.round2(products.sumOf { it.totalAmount }),
+                totalValue = InventoryCalc.sum(products.map { it.totalAmount }),
             )
         }
     }

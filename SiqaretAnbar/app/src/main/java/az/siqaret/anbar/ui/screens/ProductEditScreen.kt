@@ -98,6 +98,8 @@ fun ProductEditScreen(
     var blockText by rememberSaveable { mutableStateOf("") }
     var blocksText by rememberSaveable { mutableStateOf("") }
     var linked by rememberSaveable { mutableStateOf(true) }
+    // İstifadəçinin son yazdığı qiymət sahəsi ("block" / "box"). Avtomatik rejim yalnız ondan hesablayır.
+    var priceSource by rememberSaveable { mutableStateOf("block") }
     var firmId by rememberSaveable { mutableStateOf(initialFirmId) }
     var creatingFirm by remember { mutableStateOf(false) }
     val firms by vm.firms.collectAsStateWithLifecycle()
@@ -130,7 +132,8 @@ fun ProductEditScreen(
     val totalAmount = InventoryCalc.totalAmount(blocks ?: 0, blockPrice ?: 0.0)
 
     fun onBoxChange(v: String) {
-        boxText = Fmt.sanitizeDecimal(v)
+        boxText = Fmt.sanitizeDecimal(v, maxDecimals = 3)
+        priceSource = "box"
         error = null
         if (linked) {
             blockText = Fmt.parseDecimal(boxText)?.let { Fmt.inputNumber(InventoryCalc.blockPriceFromBox(it)) } ?: ""
@@ -139,6 +142,7 @@ fun ProductEditScreen(
 
     fun onBlockChange(v: String) {
         blockText = Fmt.sanitizeDecimal(v)
+        priceSource = "block"
         error = null
         if (linked) {
             boxText = Fmt.parseDecimal(blockText)?.let { Fmt.inputNumber(InventoryCalc.boxPriceFromBlock(it)) } ?: ""
@@ -268,7 +272,12 @@ fun ProductEditScreen(
                     Switch(checked = linked, onCheckedChange = {
                         linked = it
                         if (it) {
-                            if (boxPrice != null) onBoxChange(boxText) else if (blockPrice != null) onBlockChange(blockText)
+                            // Son yazılan sahədən hesabla; blok qiyməti varsa və son yazılan o idisə, ona toxunma
+                            when {
+                                priceSource == "box" && boxPrice != null -> onBoxChange(boxText)
+                                blockPrice != null -> onBlockChange(blockText)
+                                boxPrice != null -> onBoxChange(boxText)
+                            }
                         }
                     })
                 }
