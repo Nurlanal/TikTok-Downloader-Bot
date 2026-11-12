@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# Firebase konfiqurasiyası şəxsidir, repoya əlavə etməyin
+app/google-services.json
+firebase/node_modules/
+firebase/*.log
