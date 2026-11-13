@@ -1,0 +1,59 @@
+name: Son Tarix İzləyici — APK
+
+on:
+  push:
+    paths:
+      - "SonTarixIzleyici/**"
+      - ".github/workflows/sontarix-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SonTarixIzleyici
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit testlər
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest
+
+      - name: APK yığılması (debug + release)
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: APK fayllarını adlandır
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/SonTarixIzleyici-v1.0.0.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SonTarixIzleyici-v1.0.0-debug.apk
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SonTarixIzleyici-apk
+          path: SonTarixIzleyici/dist/*.apk
+
+      - name: GitHub Release (quraşdırıla bilən APK)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sontarix-build-${{ github.run_number }}
+          name: Son Tarix İzləyici — build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            Market üçün son istifadə tarixi izləmə tətbiqi (Android 8.0+).
+            `SonTarixIzleyici-v1.0.0.apk` faylını telefona yükləyib quraşdırın.
+          files: SonTarixIzleyici/dist/*.apk

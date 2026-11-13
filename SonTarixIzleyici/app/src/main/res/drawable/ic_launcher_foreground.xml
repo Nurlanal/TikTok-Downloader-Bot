@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Kalendar gövdəsi -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M34,36h40a6,6 0,0 1,6 6v32a6,6 0,0 1,-6 6h-40a6,6 0,0 1,-6 -6v-32a6,6 0,0 1,6 -6z"/>
+    <path android:fillColor="#F97316"
+        android:pathData="M34,36h40a6,6 0,0 1,6 6v6h-52v-6a6,6 0,0 1,6 -6z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M40,30h4v10h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M64,30h4v10h-4z"/>
+    <!-- Yoxlama işarəsi -->
+    <path android:fillColor="#00000000" android:strokeColor="#4F46E5" android:strokeWidth="5"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M42,63l8,8l16,-16"/>
+</vector>
